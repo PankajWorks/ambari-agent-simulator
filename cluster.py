@@ -30,7 +30,7 @@ class Cluster:
         self.VMs_num = 0
         self.VM_list = []
 
-    # read the vm ip list from a file
+    # read cluster info from a file
     def load_cluster_info(self, filename):
         file = open(filename)
 

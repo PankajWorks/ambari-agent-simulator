@@ -130,7 +130,7 @@ def main(argv):
 
 main(sys.argv)
 
-# python launcher_cluster.py all pengcheng-test 2 3 192.168.10.10 104.196.84.248
+# python launcher_cluster.py all test-cluster 2 3 192.168.10.10 104.196.84.248
 
 
 

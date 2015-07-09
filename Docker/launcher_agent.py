@@ -60,6 +60,7 @@ def remove_default_hostname(hostname):
         else:
             etc_hosts.write("#")
             etc_hosts.write(line)
+    etc_hosts.close()
 
 ambari_server_ip = sys.argv[1]
 my_hostname = sys.argv[2]
