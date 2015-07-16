@@ -1,3 +1,4 @@
+#!/bin/bash
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information rega4rding copyright ownership.
@@ -13,7 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#!/bin/bash
-sudo apt-get install -y curl
-sudo curl -L git.io/weave -o /usr/bin/weave
-sudo chmod a+x /usr/bin/weave
+# This script will install and start the ambari-server on a CentOS 7 machine
+
+yum install -y wget
+wget -O /etc/yum.repos.d/ambari.repo http://s3.amazonaws.com/dev.hortonworks.com/ambari/centos7/2.x/latest/2.1.0/ambaribn.repo
+yum install -y ambari-server
+ambari-server setup -s
+ambari-server start

@@ -14,25 +14,22 @@
 # limitations under the License.
 
 
-# Set the bas image to CentOS 6.x
+# Set the base image to CentOS 6.x
 FROM centos:7
 
 # Author
 MAINTAINER Pengcheng_Xu
 
-# Copy the files into Docker: Agent package file
-ADD agent.rpm /agent.rpm
 # Copy the files into Docker: launcher_agent.py
 ADD launcher_agent.py /launcher_agent.py
 # Copy the files into Docker: ambari_agent_start.sh
 ADD ambari_agent_start.sh /ambari_agent_start.sh
-# Copy hostname file into Docker: hosts
+# Copy the files into Docker: hosts
 ADD hosts /hosts
 
 RUN chmod 755 /ambari_agent_start.sh
 
 # Install ambari-agent
-# RUN yum install -y /agent.rpm
 RUN yum install -y wget
 RUN wget -O /etc/yum.repos.d/ambari.repo http://s3.amazonaws.com/dev.hortonworks.com/ambari/centos7/2.x/latest/2.1.0/ambaribn.repo
 RUN yum install -y epel-release

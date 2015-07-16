@@ -16,8 +16,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 '''
 
+from config import Config
 
 class Docker:
+    """
+    Docker represents a Docker container, each with its IP and hostname
+    """
     def __init__(self, IP, mask, hostname):
         self.IP = IP
         self.mask = mask
@@ -25,3 +29,31 @@ class Docker:
 
     def __str__(self):
         return str(self.IP) + "/" + str(self.mask) + " " + self.hostname
+
+    @staticmethod
+    def get_hostname(cluster_name, index):
+        """
+        given the index and the name of cluster, generate the hostname for the docker
+        :param cluster_name:
+        :param index:
+        :return: hostname of the docker
+        """
+        return Config.ATTRIBUTES["Container_hostname_fix"] + "-" + str(index) + "-" + cluster_name
+
+    @staticmethod
+    def get_index(hostname):
+        """
+        given the hostname of docker, extract the index of the docker within the cluster
+        :param hostname:
+        :return: the index
+        """
+        return hostname.split("-")[1]
+
+    @staticmethod
+    def get_container_name(hostname):
+        """
+        give the hostname of docker, get the name of the container
+        :param hostname:
+        :return: the name of the container
+        """
+        return hostname

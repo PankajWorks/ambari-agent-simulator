@@ -16,32 +16,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 '''
 
-
-import sys
 from config import Config
-from cluster import Cluster
 
-def get_VM(VM_IP, cluster):
+class Log:
     """
-    get the VM instance from the cluster instance
-    :param VM_IP: the IP of the target VM
-    :param cluster: the cluster instance
-    :return: the VM instance with the specified iP
+    A simple class to write log
     """
-    for vm in cluster.VM_list:
-        if vm.external_ip == VM_IP:
-            return vm
-
-if __name__ == "__main__":
-    Config.load()
-
-    cluster = Cluster()
-    cluster.load_cluster_info(Config.ATTRIBUTES["cluster_info_file"])
-
-    my_external_IP = sys.argv[1]
-    server_weave_IP = sys.argv[2]
-    server_external_IP = sys.argv[3]
-
-    vm = get_VM(my_external_IP, cluster)
-    vm.run_docker(server_weave_IP, server_external_IP, cluster)
-
+    @staticmethod
+    def write(*arg):
+        with open(Config.ATTRIBUTES["Log_file"], "a") as log_file:
+            for text in arg:
+                log_file.write(text)
+            log_file.write("\n")

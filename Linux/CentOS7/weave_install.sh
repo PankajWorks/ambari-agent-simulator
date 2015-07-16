@@ -1,3 +1,4 @@
+#!/bin/bash
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information rega4rding copyright ownership.
@@ -13,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#!/bin/bash
+# This script will install Weave on a CentOS 7 machine
+
 sudo curl -L git.io/weave -o /usr/bin/weave
 sudo chmod a+x /usr/bin/weave

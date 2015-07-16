@@ -1,3 +1,4 @@
+#!/bin/bash
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information rega4rding copyright ownership.
@@ -13,13 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#!/bin/bash
+# This script will configure the ambari-server
+# including, set Weave network and add agent hostname resolution
+
 # run this script with root
 # $1 <Weave internal IP with mask>
 # $2 <hostname files with all agents>
 
 if [ $# -lt 2 ]; then
-    echo "usage: ./sever_setup.sh <Weave internal IP with mask> <hostname file with all agents>"
+    echo "usage: ./sever_setup.sh <Weave internal IP with MASK> <hostname file with all agents>"
     echo "example: ./server_setup.sh 192.168.10.10/16 /user/simulator-script/hosts.txt"
     echo "note: the hostname file is generated automatically when you request a cluster"
     exit 1
@@ -28,6 +31,10 @@ fi
 # install weave
 chmod 755 ./Linux/CentOS7/weave_install.sh
 ./Linux/CentOS7/weave_install.sh
+
+# install docker
+chmod 755 ./Linux/CentOS7/docker_install.sh
+./Linux/CentOS7/docker_install.sh
 
 # reset weave
 weave reset
@@ -38,5 +45,12 @@ weave launch
 # expose IP
 weave expose $1
 
+# make a copy of original host file
+if [ ! -d "config" ]; then
+    mkdir config
+fi
+echo "add agent hostnames to /etc/hosts, make original copy at ./config/hosts_copy"
+cp /etc/hosts ./config/hosts_copy
+
 # add hosname of all agents
-cat $2 >> /etc/hosts3
+cat $2 >> /etc/hosts

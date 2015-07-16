@@ -23,6 +23,12 @@ from cluster import Cluster
 from config import Config
 
 def all(argv):
+    """
+    request cluster and run Docker containers on GCE
+    :param argv: the sys.argv
+    :return: None
+    """
+
     if len(argv) < 7:
         print_help()
         exit(1)
@@ -35,11 +41,23 @@ def all(argv):
 
     cluster = Cluster()
     cluster.request_GCE_cluster(VMs_num, Docker_num_each_VM, cluster_name)
-    print "wait 50 seconds for the cluster to boot ... ..."
-    time.sleep(50)
+
+
+    time_to_wait = Config.ATTRIBUTES["GCE_boot_time"]
+    print "wait ", str(time_to_wait), " seconds for the cluster to boot ... ..."
+    time.sleep(int(time_to_wait))
+
+    print "Configuring cluster"
+    print "Check output folder: ", Config.ATTRIBUTES["Output_folder"]
     cluster.run_docker_on_cluster(server_external_IP, server_Weave_IP)
+    print "Complete"
 
 def request_cluster(argv):
+    """
+    only request cluster on GCE, and output all configuration information
+    :param argv: sys.argv
+    :return: None
+    """
     if len(argv) < 5:
         print_help()
         exit(1)
@@ -53,6 +71,11 @@ def request_cluster(argv):
     print "Before run Docker on the Cluster, wait at least 50 seconds for the cluster to boot"
 
 def run_cluster(argv):
+    """
+    run all Docker containers in the cluster according to the configuration file
+    :param argv: sys.argv
+    :return: None
+    """
     if len(argv) < 4:
         print_help()
         exit(1)
@@ -60,17 +83,26 @@ def run_cluster(argv):
     server_Weave_IP = argv[2]
     server_external_IP = argv[3]
 
-    config = Config
-    config.load()
-
+    print "Configuring cluster"
+    print "Check output folder: ", Config.ATTRIBUTES["Output_folder"]
     cluster = Cluster()
-    cluster.load_cluster_info(config.ATTRIBUTES["cluster_info_file"])
+    cluster.load_cluster_info(Config.ATTRIBUTES["cluster_info_file"])
     cluster.run_docker_on_cluster(server_external_IP, server_Weave_IP)
+    print "Complete"
 
 def terminate():
+    """
+    terminate the cluster
+    :return: None
+    """
     print "Log into GCE controller to terminate your cluster manually"
 
 def print_help():
+    """
+    print help information
+    example python launcher_cluster.py all test-cluster 2 3 192.168.10.10 104.196.84.248
+    :return: None
+    """
     print "usage:"
     print
 
@@ -79,7 +111,7 @@ def print_help():
     print "\t\t", "<number of VMs>"
     print "\t\t", "<number of dockers each VMs>"
     print "\t\t", "<Weave IP of Ambari-server>"
-    print "\t\t", "<external IP of Ambari-server>"
+    print "\t\t", "<IP of Ambari-server>"
     print
 
     print "request", "  ", "request a cluster from GCE, generate the configuration for the cluster"
@@ -90,7 +122,7 @@ def print_help():
 
     print "run", "  ", "run Docker containers with Ambari-agent in all VMs of the cluster"
     print "\t\t", "<Weave IP of Ambari-server>"
-    print "\t\t", "<external IP of Ambari-server>"
+    print "\t\t", "<IP of Ambari-server>"
     print
 
     print "terminate", "  ", "terminate the cluster"
@@ -128,9 +160,9 @@ def main(argv):
     else:
         print_help()
 
-main(sys.argv)
-
-# python launcher_cluster.py all test-cluster 2 3 192.168.10.10 104.196.84.248
+if __name__ == "__main__":
+    Config.load()
+    main(sys.argv)
 
 
 

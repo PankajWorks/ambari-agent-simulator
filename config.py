@@ -17,12 +17,17 @@ limitations under the License.
 '''
 
 import ConfigParser
+import os
 
 class Config:
     ATTRIBUTES = {}
 
     @staticmethod
     def load():
+        """
+        load configuration from file, add all configuration to the map ATTRIBUTES
+        :return: None
+        """
         config = ConfigParser.RawConfigParser()
         # keep file case sensitive
         config.optionxform = str
@@ -31,6 +36,11 @@ class Config:
             for key in config.options(section):
                 Config.ATTRIBUTES[key] = config.get(section, key)
 
-
-# Config.load()
-# print Config.ATTRIBUTES
+        # set output file path
+        for key in config.options("Output"):
+            if key == "Output_folder":
+                # create the folder
+                if not os.path.exists(Config.ATTRIBUTES["Output_folder"]):
+                    os.makedirs(Config.ATTRIBUTES["Output_folder"])
+            else:
+                Config.ATTRIBUTES[key] = Config.ATTRIBUTES["Output_folder"] + "/" + Config.ATTRIBUTES[key]

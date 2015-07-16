@@ -21,50 +21,65 @@ import subprocess
 import time
 
 def replace_conf(server_ip):
-    f = open("/etc/ambari-agent/conf/ambari-agent.ini")
-    lines = f.readlines()
-    f.close()
+    """
+    replace the server host IP in the Ambari-agent configuration file
+    :param server_ip: internal Weave IP address of Ambari-server
+    :return: None
+    """
+    with open("/etc/ambari-agent/conf/ambari-agent.ini") as f:
+        lines = f.readlines()
 
-    f = open("/etc/ambari-agent/conf/ambari-agent.ini", "w+")
-    for line in lines:
-        line = line.replace("hostname=localhost", "hostname=" + server_ip)
-        f.write(line)
-    f.close()
+    with open("/etc/ambari-agent/conf/ambari-agent.ini", "w+") as f:
+        for line in lines:
+            line = line.replace("hostname=localhost", "hostname=" + server_ip)
+            f.write(line)
 
 def run_ambari_agent():
+    """
+    command line to run Ambari-agent
+    :return: None
+    """
     # command = ["sudo", "ambari-agent", "start"]
     # subprocess.call(command)
     subprocess.call("./ambari_agent_start.sh")
 
-# add all the hostnames of other containers to /etc/hosts
-def add_hostnames():
-    etc_hosts = open("/etc/hosts", "a")
-    etc_hosts.write("\n")
-
-    docker_hosts = open("/hosts")
-    for line in docker_hosts.readlines():
-        etc_hosts.write(line)
-    docker_hosts.close()
-
-    etc_hosts.close()
+def add_hostnames(agent_hosts_file, hostname):
+    """
+    add all the hostnames of other containers to /etc/hosts
+    :param agent_hosts_file: the file with all hostname IP mapping of agents
+    :return: None
+    """
+    with open("/etc/hosts", "a") as etc_hosts:
+        etc_hosts.write("\n")
+        with open(agent_hosts_file) as docker_hosts:
+            for line in docker_hosts.readlines():
+                if hostname in line:
+                    etc_hosts.write(line)
 
 def remove_default_hostname(hostname):
-    etc_hosts = open("/etc/hosts")
-    all_resolution = etc_hosts.readlines()
-    etc_hosts.close()
+    """
+    remove the default hostname IP mapping which is added by Docker
+    :param hostname: the hostname of the Docker
+    :return: None
+    """
+    with open("/etc/hosts") as etc_hosts:
+        all_resolution = etc_hosts.readlines()
 
-    etc_hosts = open("/etc/hosts", "w")
-    for line in all_resolution:
-        if hostname not in line:
-            etc_hosts.write(line)
-        else:
-            etc_hosts.write("#")
-            etc_hosts.write(line)
-    etc_hosts.close()
+    with open("/etc/hosts", "w") as etc_hosts:
+        for line in all_resolution:
+            if hostname not in line:
+                etc_hosts.write(line)
+            else:
+                etc_hosts.write("#")
+                etc_hosts.write(line)
 
-ambari_server_ip = sys.argv[1]
-my_hostname = sys.argv[2]
-replace_conf(ambari_server_ip)
-remove_default_hostname(my_hostname)
-add_hostnames()
-run_ambari_agent()
+def main():
+    ambari_server_ip = sys.argv[1]
+    my_hostname = sys.argv[2]
+    replace_conf(ambari_server_ip)
+    remove_default_hostname(my_hostname)
+    add_hostnames("/hosts", my_hostname)
+    run_ambari_agent()
+
+if __name__ == "__main__":
+    main()

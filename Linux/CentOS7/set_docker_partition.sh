@@ -1,3 +1,4 @@
+#!/bin/bash
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information rega4rding copyright ownership.
@@ -13,5 +14,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#!/bin/bash
-wget -qO- https://get.docker.com/ | sh
+# This script will set the docker use a new partition as its storage
+
+# $1 mount point to other part
+
+mount_point=$1
+docker_dir=/var/lib/docker
+
+while [ ! -d "$docker_dir" ]; do
+    echo "$docker_dir does not exist, wait for docker service to create the directory"
+    sleep 5
+done
+
+echo "move $docker_dir to partition $mount_point"
+
+service docker stop
+new_docker_dir="${1}/docker"
+mv $docker_dir $mount_point
+ln -s $new_docker_dir /var/lib
+service docker start
