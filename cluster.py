@@ -44,15 +44,16 @@ class Cluster:
             self.VMs_num = int(file.next().split()[1])
             for VM_index in range(0, self.VMs_num):
                 IP = file.next().split()[1]
-                DNS = file.next().split()[1]
-                vm = VM(IP, DNS)
+                domain_name = file.next().split()[1]
+                Weave_DNS_IP = file.next().split()[1]
+                vm = VM(IP, domain_name, Weave_DNS_IP)
                 docker_num = int(file.next().split()[1])
                 for Docker_index in range(0, docker_num):
                     line = file.next()
                     IP = line.split()[0].split("/")[0]
                     mask = line.split()[0].split("/")[1]
-                    hostname = line.split()[1]
-                    docker = Docker(IP, mask, hostname)
+                    Weave_domain_name = line.split()[1]
+                    docker = Docker(IP, mask,  Weave_domain_name)
                     vm.add_docker(docker)
                 self.VM_list.append(vm)
 
@@ -71,11 +72,11 @@ class Cluster:
             ip_list.append(tokens[1])
         return ip_list[1:]
 
-    def __extract_VM_DNS_IP__(self, GCE_info_file_name):
+    def __extract_VM_FQDN_IP__(self, GCE_info_file_name):
         """
-        exatract DNS and IP address of VMs from the output file of GCE
+        exatract domain name and IP address of VMs from the output file of GCE
         :param GCE_info_file_name: output file of "GCE info" command
-        :return: A list of tuple, each tuple has DNS and IP of a VM
+        :return: A list of tuple, each tuple has domain name and IP of a VM
         """
         with open(GCE_info_file_name) as f:
             lines = f.readlines()
@@ -83,8 +84,8 @@ class Cluster:
         VM_list = []
         for line in lines:
             tokens = line.split()
-            DNS_IP = (tokens[0], tokens[1])
-            VM_list.append(DNS_IP)
+            FQDN_IP = (tokens[0], tokens[1])
+            VM_list.append(FQDN_IP)
         return VM_list[1:]
 
     def request_GCE_cluster(self, vms_num, docker_num, cluster_name):
@@ -98,11 +99,11 @@ class Cluster:
 
         # request cluster
         gce_key = Config.ATTRIBUTES["GCE_controller_key_file"]
-        gce_login = Config.ATTRIBUTES["GCE_controller_user"] + "@" + Config.ATTRIBUTES["GCE_controller_IP"]
-        gce_up_cmd = "gce up " + cluster_name + " " + str(vms_num) + " " + Config.ATTRIBUTES["GCE_VM_type"] + \
-            " " + Config.ATTRIBUTES["GCE_VM_OS"]
+        gce_login = "{0}@{1}".format(Config.ATTRIBUTES["GCE_controller_user"], Config.ATTRIBUTES["GCE_controller_IP"])
+        gce_up_cmd = "gce up {0} {1} {2} {3}".format(cluster_name, vms_num, Config.ATTRIBUTES["GCE_VM_type"], Config.ATTRIBUTES["GCE_VM_OS"])
+
         if "GCE_extra_disk" in Config.ATTRIBUTES:
-            gce_up_cmd = gce_up_cmd + " " + Config.ATTRIBUTES["GCE_extra_disk"]
+            gce_up_cmd = "{0} {1}".format(gce_up_cmd, Config.ATTRIBUTES["GCE_extra_disk"])
 
         subprocess.call(["ssh", "-o", "StrictHostKeyChecking=no", "-i", gce_key, gce_login, gce_up_cmd])
 
@@ -113,11 +114,11 @@ class Cluster:
 
             # request cluster info
             with open(Config.ATTRIBUTES["GCE_info_output"], "w") as gce_info_output_file:
-                gce_info_cmd = "gce info " + cluster_name
+                gce_info_cmd = "gce info {0}".format(cluster_name)
                 subprocess.call(["ssh", "-o", "StrictHostKeyChecking=no", "-i", gce_key, gce_login, gce_info_cmd], \
                                 stdout=gce_info_output_file)
 
-            VM_list = self.__extract_VM_DNS_IP__(Config.ATTRIBUTES["GCE_info_output"])
+            VM_list = self.__extract_VM_FQDN_IP__(Config.ATTRIBUTES["GCE_info_output"])
 
             if len(VM_list) == vms_num:
                 Log.write("Get info for all ", str(len(VM_list)), " VMs successfully")
@@ -128,8 +129,6 @@ class Cluster:
         # prepare all attributes of the cluster, write to a file
         self.generate_cluster_info(VM_list, cluster_name, docker_num)
         self.overwrite_to_file(Config.ATTRIBUTES["cluster_info_file"])
-        # server need this file to resolve the host names of the agents
-        self.export_hostnames(Config.ATTRIBUTES["Docker_hostname_info"])
 
     def overwrite_to_file(self, filename):
         """
@@ -138,19 +137,16 @@ class Cluster:
         :return: None
         """
         with open(filename, "w") as file:
-            file.write("cluster_name: " + self.cluster_name + "\n")
-            file.write("VMs_num: " + str(self.VMs_num) + "\n")
+            file.write("cluster_name: {0}\n".format(self.cluster_name))
+            file.write("VMs_num: {0}\n".format(self.VMs_num))
 
             for vm in self.VM_list:
-                file.write("\t\t")
-                file.write("VM_IP: " + vm.external_ip + "\n")
-                file.write("\t\t")
-                file.write("VM_DNS: " + vm.DNS + "\n")
-                file.write("\t\t")
-                file.write("Docker_num: " + str(len(vm.docker_list)) + "\n")
+                file.write("\t\tVM_IP: {0}\n".format(vm.external_ip))
+                file.write("\t\tVM_domain_name: {0}\n".format(vm.domain_name ))
+                file.write("\t\tWeave_DNS_IP: {0}\n".format(vm.Weave_DNS_IP))
+                file.write("\t\tDocker_num: {0}\n".format(len(vm.docker_list)))
                 for docker in vm.docker_list:
-                    file.write("\t\t\t\t")
-                    file.write(docker.IP + "/" + docker.mask + " " + docker.hostname + "\n")
+                    file.write("\t\t\t\t{0}/{1} {2}\n".format(docker.IP, docker.mask, docker.Weave_domain_name))
 
     def __increase_IP__(self, base_IP, increase):
         """
@@ -173,7 +169,7 @@ class Cluster:
         """
         generate VM and docker info for this cluster
         set up parameter of the class instance as this info
-        :param VM_list: the DNS and IP address pairs List of all VMs
+        :param VM_list: the domain name and IP address pairs List of all VMs
         :param cluster_name: the name of the cluster
         :param docker_num: the number of Docker containers inside each VM
         :return: None
@@ -181,19 +177,24 @@ class Cluster:
         Docker_IP_base = Config.ATTRIBUTES["Docker_IP_base"].split(".")
         Docker_IP_mask = Config.ATTRIBUTES["Docker_IP_mask"]
 
+        current_IP = Docker_IP_base
         VM_index = 0
-        for VM_DNS, VM_IP in VM_list:
-            vm = VM(VM_IP, VM_DNS)
+        for VM_domain_name, VM_IP in VM_list:
+            current_IP = self.__increase_IP__(current_IP, 1)
+            Weave_DNS_IP = "{0}.{1}.{2}.{3}".format(current_IP[0], current_IP[1], current_IP[2], current_IP[3])
+            vm = VM(VM_IP, VM_domain_name, Weave_DNS_IP)
 
             for Docker_index in range(0, docker_num):
+                current_IP = self.__increase_IP__(current_IP, 1)
+                docker_IP_str = "{0}.{1}.{2}.{3}".format(current_IP[0], current_IP[1], current_IP[2], current_IP[3])
+
                 total_Docker_index = VM_index * docker_num + Docker_index
-                docker_IP = self.__increase_IP__(Docker_IP_base, total_Docker_index)
-                docker_IP_str = str(docker_IP[0]) + "." + str(docker_IP[1]) + "." + \
-                                str(docker_IP[2]) + "." + str(docker_IP[3])
-                docker_hostname = Docker.get_hostname(cluster_name, total_Docker_index)
+                docker_hostname = Docker.get_Weave_domain_name(cluster_name, total_Docker_index)
+
                 docker = Docker(docker_IP_str, str(Docker_IP_mask), docker_hostname)
                 # print docker
                 vm.add_docker(docker)
+
             VM_index = VM_index + 1
             self.VM_list.append(vm)
 
@@ -214,14 +215,14 @@ class Cluster:
 
         for vm in self.VM_list:
             # open file for the output
-            VM_output_file_path = Config.ATTRIBUTES["Output_folder"] + "/VM-" + vm.hostname + "-" + vm.external_ip
+            VM_output_file_path = vm.__get_SSH_output_file_path__()
             VM_output_file = open(VM_output_file_path, "w")
             VM_output_file_list.append(VM_output_file)
 
             # upload necessary file to each machine in cluster
             VM_external_IP = vm.external_ip
-            VM_directory = "root@" + VM_external_IP + ":" + Config.ATTRIBUTES["VM_code_directory"]
-            VM_key = Config.ATTRIBUTES["GCE_VM_key_file"]
+            VM_directory = "{0}@{1}:{2}".format(Config.ATTRIBUTES["VM_user"], VM_external_IP, Config.ATTRIBUTES["VM_code_directory"])
+            VM_key = Config.ATTRIBUTES["VM_key_file"]
 
             upload_return_code = 0
             with open(os.devnull, 'w') as shutup:
@@ -232,10 +233,14 @@ class Cluster:
             else:
                 Log.write("VM ", VM_external_IP, " file upload fail")
 
+            VM_ssh_login = "{0}@{1}".format(Config.ATTRIBUTES["VM_user"], VM_external_IP)
+
+            VM_ssh_cd_cmd = "cd {0}".format(Config.ATTRIBUTES["VM_code_directory"])
+            VM_ssh_python_cmd = "python launcher_docker.py {0} {1} {2}".format(VM_external_IP, server_Weave_IP, server_external_IP)
+            VM_ssh_cmd = "{0};{1}".format(VM_ssh_cd_cmd, VM_ssh_python_cmd)
+
             process = subprocess.Popen(["ssh", "-o", "StrictHostKeyChecking=no", "-t", "-i", VM_key, \
-                                        "root@" + VM_external_IP, \
-                                        "cd " + Config.ATTRIBUTES["VM_code_directory"] + "; python launcher_docker.py" + \
-                                        " " + VM_external_IP + " " + server_Weave_IP + " " + server_external_IP], \
+                                        VM_ssh_login, VM_ssh_cmd], \
                                        stdout=VM_output_file, stderr=VM_output_file)
 
             process_list.append(process)
@@ -254,7 +259,7 @@ class Cluster:
                     if returncode is None:
                         continue
                     else:
-                        VM_output_file_path = Config.ATTRIBUTES["Output_folder"] + "/VM-" + self.VM_list[index].external_ip
+                        VM_output_file_path =  self.VM_list[index].__get_SSH_output_file_path__()
                         Log.write("VM ", self.VM_list[index].external_ip, " configuration completed, return code: ", str(returncode) \
                             , ", output file path: ", VM_output_file_path)
                         terminate_state_list[index] = True
@@ -266,17 +271,3 @@ class Cluster:
             time.sleep(5)
 
         Log.write("All VM configuration completed.")
-
-    def export_hostnames(self, filename):
-        """
-        export hostname and Weave internal IP mapping of all Docker container to a file
-        :param filename: the name of the file
-        :return: None
-        """
-        with open(filename, "w") as hostname_file:
-            for vm in self.VM_list:
-                for docker in vm.docker_list:
-                    hostname_file.write(docker.IP)
-                    hostname_file.write(" ")
-                    hostname_file.write(docker.hostname)
-                    hostname_file.write("\n")

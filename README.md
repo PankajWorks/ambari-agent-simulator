@@ -42,10 +42,6 @@ python launcher_cluster.py run
 	<Weave IP of Ambari-server>
 	<IP of Ambari-server>
 
-python launcher_cluster.py terminate    
-
-    terminate the cluster
-
 python launcher_cluster.py help    
         
     show help info
@@ -71,13 +67,20 @@ python launcher_cluster.py help
     Modify attributes: Output_folder, GCE_controller_key_file, GCE_VM_key_file
     Change Docker_IP_base and Docker_IP_mask according to Step 2: 192.168.2.2 and 16
     
-* Step 4: Launch Ambari-agent cluster
+* Step 4: Request Ambari-agent cluster
 
 
-    Run python launcher_cluster.py all
-    cluster.txt and hosts.txt file will appear under directory ./config within 1 minutes
+    Run python launcher_cluster.py request
+    cluster.txt file will appear under directory ./config within 1 minutes
     
-* Step 5: First time set up Ambari-server
+* Step 5: Run Ambari-agent Cluster
+
+
+    Modify cluster.txt file to configure the cluster
+    Run python launcher_cluster.py run
+    
+
+* Step 6: First time set up Ambari-server
 
 
     Copy all the agent-simulator code base to Ambari-server
@@ -86,8 +89,7 @@ python launcher_cluster.py help
 * Extra: Add more Ambari-agents to Ambari-server (already set up)
 
 
-    Either: do Step 5 again 
-    Or: just append hosts.txt to your /etc/hosts
+    Do Step 4 and 5 again
     
 ## Expand Cluster With This Script 
 Be careful if you wanna use this script to add more Ambari-agents AGAIN to your Ambari-server
@@ -95,16 +97,24 @@ Be careful if you wanna use this script to add more Ambari-agents AGAIN to your 
 * Use different Cluster Name when providing parameters to launcher_cluster.py
 * In config.ini, use the same Docker_IP_mask, make sure the same subnet
 * Change config.ini to use different Docker_IP_base, make sure that all new IPs never overlap with the existing IPs
-* Remember to add the new hosts.txt to /etc/hosts on your Ambari-server
+* Change config.ini to use different Container_hostname_fix, make sure that all Docker containers have different names and host names
+* Change config.ini to use different cluster_info_file, make sure the existing cluster information is not overwritten
    
 ## Expand Cluster By Adding other Hosts/VMs
    
 ## Naming Convention
 Cluster Name, VM Name, Docker Name
 
+## Configure and Inspect the Cluster
+
+## Use Image for Docker Container
+
+## Use Different Partition for Docker Container
+
 ## Suggestions:
 * Use CTRL + P, then CTRL + Q to exit Docker container
     Use "exit" will terminate the container.
+    How to bring it back, if you terminated one Docker?
 * Remove ~/.ssh/know_hosts files, especially if you run a large cluster
     You might get a warning from SSH, because the new GCE VM assigned to you might have the same IP with the VMs you saved in know_hosts file. Remove .ssh/know_hosts before run this script.
 * Ambari-agent and Ambari-server have to be the same version to successfully register. 

@@ -14,7 +14,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This script will install Weave on a CentOS 7 machine
-
-sudo curl -s -L git.io/weave -o /usr/bin/weave
-sudo chmod a+x /usr/bin/weave
+# This script is used to add a Host/VM to the Docker network
+# for example, an Ambari-agent withn a VM (not in a Docker container)

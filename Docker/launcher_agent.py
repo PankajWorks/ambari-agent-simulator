@@ -43,42 +43,30 @@ def run_ambari_agent():
     # subprocess.call(command)
     subprocess.call("./ambari_agent_start.sh")
 
-def add_hostnames(agent_hosts_file, hostname):
+def set_Weave_IP(Weave_IP):
     """
-    add all the hostnames of other containers to /etc/hosts
-    :param agent_hosts_file: the file with all hostname IP mapping of agents
-    :return: None
-    """
-    with open("/etc/hosts", "a") as etc_hosts:
-        etc_hosts.write("\n")
-        with open(agent_hosts_file) as docker_hosts:
-            for line in docker_hosts.readlines():
-                if hostname in line:
-                    etc_hosts.write(line)
-
-def remove_default_hostname(hostname):
-    """
-    remove the default hostname IP mapping which is added by Docker
-    :param hostname: the hostname of the Docker
+    set the IP and hostname mapping for this Container
+    Docker will assign an IP to each Container, and map it to hostname, which is not we want
+    We want our Weave IP to be mapped to hostname
+    :param Weave_IP:
     :return: None
     """
     with open("/etc/hosts") as etc_hosts:
         all_resolution = etc_hosts.readlines()
 
     with open("/etc/hosts", "w") as etc_hosts:
-        for line in all_resolution:
-            if hostname not in line:
-                etc_hosts.write(line)
+        for index in range(len(all_resolution)):
+            if index == 0:
+                token = all_resolution[index].split()
+                etc_hosts.write("{0} {1} {2}\n".format(Weave_IP, token[1], token[2]))
             else:
-                etc_hosts.write("#")
-                etc_hosts.write(line)
+                etc_hosts.write(all_resolution[index])
 
 def main():
     ambari_server_ip = sys.argv[1]
-    my_hostname = sys.argv[2]
+    my_Weave_IP = sys.argv[2]
     replace_conf(ambari_server_ip)
-    remove_default_hostname(my_hostname)
-    add_hostnames("/hosts", my_hostname)
+    set_Weave_IP(my_Weave_IP)
     run_ambari_agent()
 
 if __name__ == "__main__":

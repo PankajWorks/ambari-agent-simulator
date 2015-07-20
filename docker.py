@@ -22,38 +22,36 @@ class Docker:
     """
     Docker represents a Docker container, each with its IP and hostname
     """
-    def __init__(self, IP, mask, hostname):
+    def __init__(self, IP, mask, Weave_domain_name):
         self.IP = IP
         self.mask = mask
-        self.hostname = hostname
+        self.Weave_domain_name = Weave_domain_name
 
     def __str__(self):
-        return str(self.IP) + "/" + str(self.mask) + " " + self.hostname
+        return str(self.IP) + "/" + str(self.mask) + " " + self.Weave_domain_name
 
     @staticmethod
-    def get_hostname(cluster_name, index):
+    def get_Weave_domain_name(cluster_name, index):
         """
-        given the index and the name of cluster, generate the hostname for the docker
+        given the index and the name of cluster, generate the  Weave domain name for the docker
         :param cluster_name:
         :param index:
-        :return: hostname of the docker
+        :return: Weave domain name of the docker container
         """
-        return Config.ATTRIBUTES["Container_hostname_fix"] + "-" + str(index) + "-" + cluster_name
+        return "{0}-{1}-{2}.{3}".format(Config.ATTRIBUTES["Container_hostname_fix"], index, cluster_name, "weave.local")
 
-    @staticmethod
-    def get_index(hostname):
+    def get_index(self):
         """
-        given the hostname of docker, extract the index of the docker within the cluster
-        :param hostname:
+        extract the index of the docker within the cluster
         :return: the index
         """
-        return hostname.split("-")[1]
+        return self.Weave_domain_name.split("-")[1]
 
-    @staticmethod
-    def get_container_name(hostname):
+    def get_container_name(self):
         """
-        give the hostname of docker, get the name of the container
-        :param hostname:
         :return: the name of the container
         """
-        return hostname
+        return self.get_hostname()
+
+    def get_hostname(self):
+        return self.Weave_domain_name.split(".")[0]

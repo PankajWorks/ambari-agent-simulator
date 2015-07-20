@@ -90,13 +90,6 @@ def run_cluster(argv):
     cluster.run_docker_on_cluster(server_external_IP, server_Weave_IP)
     print "Complete"
 
-def terminate():
-    """
-    terminate the cluster
-    :return: None
-    """
-    print "Log into GCE controller to terminate your cluster manually"
-
 def print_help():
     """
     print help information
@@ -125,14 +118,10 @@ def print_help():
     print "\t\t", "<IP of Ambari-server>"
     print
 
-    print "terminate", "  ", "terminate the cluster"
-    print
-
     print "help", "  ", "help info"
     print
 
     print "more options in configuration file config/config.ini"
-    print "see more instructions in tips.txt"
     print
 
 def main(argv):
@@ -150,9 +139,6 @@ def main(argv):
 
     elif command == "run":
         run_cluster(argv)
-
-    elif command == "terminate":
-        terminate()
 
     elif command == "help":
         print_help()

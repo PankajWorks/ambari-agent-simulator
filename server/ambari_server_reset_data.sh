@@ -1,3 +1,4 @@
+#!/bin/bash
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information rega4rding copyright ownership.
@@ -13,24 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# This script will clear all the data in the ambari-server
 
-# Set the base image to CentOS 6.x
-FROM centos:7
-
-# Author
-MAINTAINER Pengcheng_Xu
-
-# Copy the files into Docker: launcher_agent.py
-ADD launcher_agent.py /launcher_agent.py
-# Copy the files into Docker: ambari_agent_start.sh
-ADD ambari_agent_start.sh /ambari_agent_start.sh
-# Copy the files into Docker: hosts
-ADD hosts /hosts
-
-RUN chmod 755 /ambari_agent_start.sh
-
-# Install ambari-agent
-RUN yum install -y wget
-RUN wget -O /etc/yum.repos.d/ambari.repo http://s3.amazonaws.com/dev.hortonworks.com/ambari/centos7/2.x/latest/2.1.0/ambaribn.repo
-RUN yum install -y epel-release
-RUN yum install -y ambari-agent
+ambari-server stop
+sudo -u postgres psql -c "drop database ambari;"
+sudo -u postgres psql -c "drop database ambarirca;"
+ambari-server setup << _EOF_
+y
+n
+n
+n
+_EOF_
+ambari-server start

@@ -16,8 +16,8 @@
 
 # This script will install and start the ambari-server on a CentOS 7 machine
 
-yum install -y wget
-wget -O /etc/yum.repos.d/ambari.repo http://s3.amazonaws.com/dev.hortonworks.com/ambari/centos7/2.x/latest/2.1.0/ambaribn.repo
-yum install -y ambari-server
+yum install -y -q wget
+wget -q -O /etc/yum.repos.d/ambari.repo http://s3.amazonaws.com/dev.hortonworks.com/ambari/centos7/2.x/latest/2.1.0/ambaribn.repo
+yum install -y -q ambari-server
 ambari-server setup -s
 ambari-server start

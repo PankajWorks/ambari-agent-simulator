@@ -29,7 +29,7 @@ done
 echo "move $docker_dir to partition $mount_point"
 
 service docker stop
-new_docker_dir="${1}/docker"
-mv $docker_dir $mount_point
-ln -s $new_docker_dir /var/lib
+cp -r ${docker_dir}/* mount_point
+rm -rf $docker_dir
+ln -s $mount_point $docker_dir
 service docker start
