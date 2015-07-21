@@ -56,7 +56,8 @@ Each Docker container can connect with each other by using the internal IP, host
 
 All the Weave internal IP should be configured by the user. 
 In this following document, we use subnet 192.168.#.#/16, and use the IP within this subnet to configure Weave. 
-Actually, You can use any IP as you wish, even public IP, in which case, it will replace and redirect the connection to the real outside connection.
+Actually, You can use any IP as you wish, even public IP, in which case, 
+it will replace the connection to the real outside connection, and redirect the connection to the internal Docker container.
 
 ## Quick Start
 * Step 1: Mark down IP of the GCE VM which installed Ambari-server, Ambari_Server_IP=104.196.81.81
