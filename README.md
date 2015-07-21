@@ -64,6 +64,8 @@ With the following 6 steps, you can create a cluster with Ambari-agents, and con
 Among all the steps, the step 3 is to configure this program, the step 4 is the one which really matters, 
 and other steps act as a one-time configuration or suggestion for your Ambari-server.
 
+You can start with this guide by downloading the code to your own computer or any computers which can access the GCE controller.
+
 * Step 1: Mark down IP of the GCE VM which installed Ambari-server, Ambari_Server_IP=104.196.81.81
 * Step 2: Copy example/config.ini to config/config.ini
 * Step 3: Modify the following values in config/config.ini
