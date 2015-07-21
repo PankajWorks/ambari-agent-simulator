@@ -57,34 +57,36 @@ python launcher_cluster.py help
     * VM_key_file
     * cluster_info_file, use {yourname}-group-a
 * Step 4: Use the command line to run 3 VMs, each VM has 5 Ambari-agents.
-
+    ```
         python launcher_cluster.py all {yourname}-group-a 3 5 192.168.255.1 Ambari_Server_IP
-
+    ```
 * Step 5: Log into your Ambari-server machine, run the following command line
-
+    ```
         cd agent-simulator/network
         ./set_ambari_server_network.sh 192.168.255.1 192.168.255.2 16
-        
+    ``` 
 * Step 6: Operate on Ambari-server web GUI
     * Add all agents: docker-[0-14]-{yourname}-group-a.weave.local
     * Choose manual registration
     * Choose to install HDFS, YARN, HBase, Zookeeper, Ambari-Metrics
+    
+
+## More on Quick Start
 * Step 7: Add one more cluster to your Ambari-server
     * Modify cluster_info_file in config/config.ini, use {yourname}-group-b
     * Modify Docker_IP_base in config.config.ini, use 192.168.2.1
     * Use the command line to run 2 VMs, each VM has 10 Ambari-agents:
-    
-    ```python launcher_cluster.py all {yourname}-group-b 2 10 192.168.255.1 Ambari_Server_IP```
-    
+    ```
+        python launcher_cluster.py all {yourname}-group-b 2 10 192.168.255.1 Ambari_Server_IP
+    ```
     * On Ambari-server web GUI, add all agents: docker-[0-19]-{yourname}-group-b.weave.local
 * Step 8: Add one VM with Ambari-agent installed to your Ambari-server
     * Log into your VM, set Ambari_Server_IP as the value of server hostname in the file /etc/ambari-agent/conf/ambari-agent.ini
     * On the VM, Run the following command
-    
-    ```cd agent-simulator/network```
-    
-    ```./set_host_network.sh 192.168.254.1 192.168.254.2 16 Ambari_Server_IP```
-
+    ```
+        cd agent-simulator/network
+        ./set_host_network.sh 192.168.254.1 192.168.254.2 16 Ambari_Server_IP
+    ```
 
 ## Detail Work Flow:
 Step 1: Install Ambari-server
