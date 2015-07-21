@@ -23,7 +23,7 @@
 
 if [ $# -lt 2 ]; then
     echo "usage: ./set_ambari_server_network.sh <Weave internal IP> <Weave DNS IP> <Mask>"
-    echo "example: ./set_ambari_server_network.sh 192.168.10.10 192.168.10.11 16"
+    echo "example: ./set_ambari_server_network.sh 192.168.255.1 192.168.255.2 16"
     exit 1
 fi
 
@@ -46,10 +46,10 @@ weave reset
 weave launch
 
 # expose IP
-weave expose "${Weave_internal_IP}/${mask}"
+weave expose ${Weave_internal_IP}/${mask}
 
 # launch Weave DNS
-weave launch-dns "${Weave_DNS_IP}/${mask}"
+weave launch-dns ${Weave_DNS_IP}/${mask}
 
 # edit /etc/resolv.conf file
-
+python DNS_editor.py $Weave_DNS_IP

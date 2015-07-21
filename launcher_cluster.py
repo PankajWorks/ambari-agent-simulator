@@ -93,14 +93,14 @@ def run_cluster(argv):
 def print_help():
     """
     print help information
-    example python launcher_cluster.py all test-cluster 2 3 192.168.10.10 104.196.84.248
+    example python launcher_cluster.py all test-cluster 2 3 192.168.255.1 104.196.84.248
     :return: None
     """
     print "usage:"
     print
 
     print "all", "  ", "request a GCE cluster and run Docker containers with Ambari-agent in all VMs"
-    print "\t\t", "<the name of the cluster>"
+    print "\t\t", "<the name of the cluster> (suggestion: {yourname}-group-a)"
     print "\t\t", "<number of VMs>"
     print "\t\t", "<number of dockers each VMs>"
     print "\t\t", "<Weave IP of Ambari-server>"

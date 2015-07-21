@@ -1,7 +1,3 @@
 *.pyc
 .idea/
-config/gce-key
-config/hosts.txt
-config/cluster.txt
-test/
-output/
+.DS_Store

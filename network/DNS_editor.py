@@ -18,23 +18,28 @@ limitations under the License.
 
 import sys
 
-local_nameserver_IP = sys.argv[1]
-
+local_Weave_DNS_IP = sys.argv[1]
 nameserver_file_name = "/etc/resolv.conf"
-with open(nameserver_file_name) as f:
-    lines = f.readlines()
+
+with open(nameserver_file_name) as f_read:
+    lines = f_read.readlines()
 
 add_nameserver = False
-with open(nameserver_file_name, "w+") as f:
+with open(nameserver_file_name, "w") as f:
     for line in lines:
         if "search" in line:
             tokens = line.split()
-            f.write("search weave.local ")
-            for token in tokens[2:]:
+            f.write("search weave.local")
+            for token in tokens[1:]:
+                f.write(" ")
                 f.write(token)
             f.write("\n")
-        if "nameserver" in line:
-
-            f.write("nameserver ")
+        elif "nameserver" in line:
+            if add_nameserver == False:
+                f.write("nameserver ")
+                f.write(local_Weave_DNS_IP)
+                f.write("\n")
+                add_nameserver = True
+            f.write(line)
         else:
             f.write(line)
