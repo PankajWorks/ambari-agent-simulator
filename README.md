@@ -60,6 +60,10 @@ Actually, You can use any IP as you wish, even public IP, in which case,
 it will replace the connection to the real outside connection, and redirect the connection to the internal Docker container.
 
 ## Quick Start
+With the following 6 steps, you can create a cluster with Ambari-agents, and connect them to your Ambari-server. 
+Among all the steps, the step 3 is to configure this program, the step 4 is the one which really matters, 
+and other steps act as a one-time configuration or suggestion for your Ambari-server.
+
 * Step 1: Mark down IP of the GCE VM which installed Ambari-server, Ambari_Server_IP=104.196.81.81
 * Step 2: Copy example/config.ini to config/config.ini
 * Step 3: Modify the following values in config/config.ini
