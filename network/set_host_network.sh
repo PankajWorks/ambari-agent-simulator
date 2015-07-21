@@ -40,7 +40,7 @@ chmod 755 ../Linux/CentOS7/docker_install.sh
 weave reset
 
 # launch weave
-weave launch ${Ambari_server_IP}/${mask}
+weave launch $Ambari_server_IP
 
 # expose IP
 weave expose ${Weave_internal_IP}/${mask}

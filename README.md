@@ -46,6 +46,8 @@ python launcher_cluster.py help
         
     show help info
 
+## Introduction to Weave Networking
+
 ## Quick Start
 * Step 1: Mark down IP of the GCE VM which installed Ambari-server, Ambari_Server_IP=104.196.81.81
 * Step 2: Copy example/config.ini to config/config.ini
@@ -72,16 +74,16 @@ python launcher_cluster.py help
     * Modify Docker_IP_base in config.config.ini, use 192.168.2.1
     * Use the command line to run 2 VMs, each VM has 10 Ambari-agents:
     
-        python launcher_cluster.py all {yourname}-group-b 2 10 192.168.255.1 Ambari_Server_IP
-
+    ```python launcher_cluster.py all {yourname}-group-b 2 10 192.168.255.1 Ambari_Server_IP```
+    
     * On Ambari-server web GUI, add all agents: docker-[0-19]-{yourname}-group-b.weave.local
 * Step 8: Add one VM with Ambari-agent installed to your Ambari-server
     * Log into your VM, set Ambari_Server_IP as the value of server hostname in the file /etc/ambari-agent/conf/ambari-agent.ini
     * On the VM, Run the following command
-        
-        cd agent-simulator/network
-        ./set_host_network.sh 192.168.254.1 192.168.254.2 16 Ambari_Server_IP
-
+    
+    ```cd agent-simulator/network```
+    
+    ```./set_host_network.sh 192.168.254.1 192.168.254.2 16 Ambari_Server_IP```
 
 
 ## Detail Work Flow:
