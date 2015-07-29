@@ -172,6 +172,20 @@ you can find out which VM has which Docker container in the cluster information 
 
 ## Use Different Partition for Docker Container
 
+## The IP assign mechanism.
+Basically, you don't have to worry about IP. The maximum number of IP is limited by weave_ip_base and weave_ip_mask.
+By fault, the subnet is 192.168.#.#/16. Once you have already created 256*256 agents (the real number is smaller, 
+since the DNS on the VM also uses IP address), some address might fall out side of subnet and some fall inside,
+which causes a connection issue. The function related is cluster._increase_ip(). You might want to wrap the IP around, 
+but corner cases are always there, there is no silver bullet.
+
+
+## Issues
+* This tool do NOT support parallel usage
+* If GCE has no enough resource, the cluster returned to you will have a smaller number of VM
+* Don't merge your cluster into someone else's cluster. Actually you can do it, but you have to dig into the network, and
+make sure the IP configuration is right.
+
 ## Suggestions:
 * Make sure your cluster name is unique, or you might cause trouble to other people's VM
 * Use CTRL + P, then CTRL + Q to exit Docker container. Use "exit" will terminate the container.

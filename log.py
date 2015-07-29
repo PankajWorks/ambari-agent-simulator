@@ -24,7 +24,7 @@ class Log:
     """
     @staticmethod
     def write(*arg):
-        with open(Config.ATTRIBUTES["Log_file"], "a") as log_file:
+        with open(Config.ATTRIBUTES["log_file"], "a") as log_file:
             for text in arg:
                 log_file.write(text)
             log_file.write("\n")

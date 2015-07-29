@@ -22,6 +22,12 @@ import os
 class Config:
     ATTRIBUTES = {}
 
+    AMBARI_AGENT_VM = "ambari_agent_vm"
+    AMBARI_SERVER_VM = "ambari_server_vm"
+    SERVICE_SERVER_VM = "service_server_vm"
+
+    RELATIVE_CONFIG_FILE_PATH = "config/config.ini"
+
     @staticmethod
     def load():
         """
@@ -31,16 +37,24 @@ class Config:
         config = ConfigParser.RawConfigParser()
         # keep file case sensitive
         config.optionxform = str
-        config.read("config/config.ini")
+        config.read(Config.RELATIVE_CONFIG_FILE_PATH)
         for section in config.sections():
             for key in config.options(section):
                 Config.ATTRIBUTES[key] = config.get(section, key)
 
         # set output file path
-        for key in config.options("Output"):
-            if key == "Output_folder":
+        for key in config.options("output"):
+            if key == "output_folder":
                 # create the folder
-                if not os.path.exists(Config.ATTRIBUTES["Output_folder"]):
-                    os.makedirs(Config.ATTRIBUTES["Output_folder"])
+                if not os.path.exists(Config.ATTRIBUTES["output_folder"]):
+                    os.makedirs(Config.ATTRIBUTES["output_folder"])
             else:
-                Config.ATTRIBUTES[key] = Config.ATTRIBUTES["Output_folder"] + "/" + Config.ATTRIBUTES[key]
+                Config.ATTRIBUTES[key] = Config.ATTRIBUTES["output_folder"] + "/" + Config.ATTRIBUTES[key]
+
+    @staticmethod
+    def update(section, key, value):
+        config= ConfigParser.RawConfigParser()
+        config.read(Config.RELATIVE_CONFIG_FILE_PATH)
+        config.set(section, key, value)
+        with open(Config.RELATIVE_CONFIG_FILE_PATH, 'wb') as configfile:
+                config.write(configfile)

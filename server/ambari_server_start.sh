@@ -14,22 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This script will set the docker use a new partition as its storage
+# This script will install and start the ambari-server on a CentOS 7 machine
 
-# $1 mount point to other part
-
-mount_point=$1
-docker_dir=/var/lib/docker
-
-while [ ! -d "$docker_dir" ]; do
-    echo "$docker_dir does not exist, wait for docker service to create the directory"
-    sleep 5
-done
-
-echo "move $docker_dir to partition $mount_point"
-
-service docker stop
-cp -r ${docker_dir}/* $mount_point
-rm -rf $docker_dir
-ln -s $mount_point $docker_dir
-service docker start
+sudo ambari-server start
+echo "ambari-server start"

@@ -18,154 +18,192 @@ limitations under the License.
 
 import subprocess
 import time
+import datetime
 from config import Config
 from docker import Docker
 from vm import VM
 import os
+import time
 from log import Log
+from data import Data
 
 class Cluster:
     """
     The Cluster instance holds a list of VMs, and has the methods to request cluster, generate information and run all Ambari-agent
     """
+
+    STATE_FREE = "free"
+    STATE_RUNNING = "running"
+    STATE_MERGE = "merge"
+
     def __init__(self):
         self.cluster_name = ""
-        self.VMs_num = 0
-        self.VM_list = []
+        self.ambari_server_vm = []
+        self.service_server_vm_list = []
+        self.ambari_agent_vm_list = []
 
-    def load_cluster_info(self, filename):
+    def get_agent_vm(self, vm_ip):
         """
-        read cluster info from a file
-        :param filename: name of the cluster infomation file
-        :return: None
+        get the VM instance from the cluster instance
+        :param vm_ip: the IP of the target VM
+        :param cluster: the cluster instance
+        :return: the VM instance with the specified iP
         """
-        with open(filename) as file:
-            self.cluster_name = file.next().split()[1]
-            self.VMs_num = int(file.next().split()[1])
-            for VM_index in range(0, self.VMs_num):
-                IP = file.next().split()[1]
-                domain_name = file.next().split()[1]
-                Weave_DNS_IP = file.next().split()[1]
-                vm = VM(IP, domain_name, Weave_DNS_IP)
-                docker_num = int(file.next().split()[1])
-                for Docker_index in range(0, docker_num):
-                    line = file.next()
-                    IP = line.split()[0].split("/")[0]
-                    mask = line.split()[0].split("/")[1]
-                    Weave_domain_name = line.split()[1]
-                    docker = Docker(IP, mask,  Weave_domain_name)
-                    vm.add_docker(docker)
-                self.VM_list.append(vm)
+        for vm in cluster.ambari_agent_vm_list:
+            if vm.external_ip == vm_ip:
+                return vm
 
-    def __extract_VM_IP__(self, GCE_info_file_name):
-        """
-        exatract IP address of VMs from the output file of GCE
-        :param GCE_info_file_name: output file of "GCE info" command
-        :return: the IP address List
-        """
-        with open(GCE_info_file_name) as f:
-            lines = f.readlines()
+    def get_ambari_server_vm(self):
+        for vm in cluster.ambari_server_vm:
+            return vm
 
-        ip_list = []
-        for line in lines:
-            tokens = line.split()
-            ip_list.append(tokens[1])
-        return ip_list[1:]
+    def get_service_server_vm(self, vm_ip):
+        for vm in cluster.service_server_vm_list:
+            if vm.external_ip == vm_ip:
+                return vm
 
-    def __extract_VM_FQDN_IP__(self, GCE_info_file_name):
+    def to_json(self):
+        cluster = {}
+        cluster["cluster_name"] = self.cluster_name
+        cluster["create_time"] = str(datetime.datetime.now())
+
+        cluster["ambari_server_vm"] = []
+        for vm in self.ambari_server_vm:
+            cluster["ambari_server_vm"].append(vm.to_json())
+
+        cluster["service_server_vm_list"] = []
+        for vm in self.service_server_vm_list:
+            cluster["service_server_vm_list"].append(vm.to_json())
+
+        cluster["ambari_agent_vm_list"] = []
+        for vm in self.ambari_agent_vm_list:
+            cluster["ambari_agent_vm_list"].append(vm.to_json())
+
+        return cluster
+
+    @staticmethod
+    def load_from_json(cluster_name):
+        data = Data()
+        json_data = data.read_cluster_json(cluster_name)
+        ambari_server_vm = []
+        service_server_vm_list = []
+        ambari_agent_vm_list = []
+
+        for vm_json in json_data["ambari_server_vm"]:
+            ambari_server_vm.append(VM.load_from_json(vm_json))
+
+        for vm_json in json_data["service_server_vm_list"]:
+            service_server_vm_list.append(VM.load_from_json(vm_json))
+
+        for vm_json in json_data["ambari_agent_vm_list"]:
+            ambari_agent_vm_list.append(VM.load_from_json(vm_json))
+
+        cluster = Cluster()
+        cluster.cluster_name = cluster_name
+        cluster.ambari_server_vm = ambari_server_vm
+        cluster.service_server_vm_list = service_server_vm_list
+        cluster.ambari_agent_vm_list = ambari_agent_vm_list
+        return cluster
+
+    def _extract_vm_fqdn_ip(self, gce_info_file_name):
         """
         exatract domain name and IP address of VMs from the output file of GCE
         :param GCE_info_file_name: output file of "GCE info" command
         :return: A list of tuple, each tuple has domain name and IP of a VM
         """
-        with open(GCE_info_file_name) as f:
+        lines = []
+        with open(gce_info_file_name) as f:
             lines = f.readlines()
 
-        VM_list = []
-        for line in lines:
+        vm_list = []
+        # the first line in the output file is title
+        for line in lines[1:]:
             tokens = line.split()
-            FQDN_IP = (tokens[0], tokens[1])
-            VM_list.append(FQDN_IP)
-        return VM_list[1:]
+            fqdn_ip = (tokens[0], tokens[1])
+            vm_list.append(fqdn_ip)
+        return vm_list
 
-    def request_GCE_cluster(self, vms_num, docker_num, cluster_name):
-        """
-        request a new cluster from GCE
-        :param vms_num: the number of GCE VM
-        :param docker_num: the number of Docker containers inside each VM
-        :param cluster_name: the name of the cluster
-        :return: None
-        """
-
-        # request cluster
-        gce_key = Config.ATTRIBUTES["GCE_controller_key_file"]
-        gce_login = "{0}@{1}".format(Config.ATTRIBUTES["GCE_controller_user"], Config.ATTRIBUTES["GCE_controller_IP"])
-        gce_up_cmd = "gce up {0} {1} {2} {3}".format(cluster_name, vms_num, Config.ATTRIBUTES["GCE_VM_type"], Config.ATTRIBUTES["GCE_VM_OS"])
-
-        if "GCE_extra_disk" in Config.ATTRIBUTES:
-            gce_up_cmd = "{0} {1}".format(gce_up_cmd, Config.ATTRIBUTES["GCE_extra_disk"])
-
+    def request_vm(self, name, vm_num, gce_vm_type, gce_vm_os, gce_extra_cmd):
+        gce_key = Config.ATTRIBUTES["gce_controller_key_file"]
+        gce_login = "{0}@{1}".format(Config.ATTRIBUTES["gce_controller_user"], Config.ATTRIBUTES["gce_controller_ip"])
+        gce_up_cmd = "gce up {0} {1} {2} {3} {4}".format(name, vm_num, gce_vm_type, gce_vm_os, gce_extra_cmd)
         subprocess.call(["ssh", "-o", "StrictHostKeyChecking=no", "-i", gce_key, gce_login, gce_up_cmd])
 
         Log.write("cluster launched, wait for cluster info ... ...")
 
-        for retry in range(3):
+        fqdn_ip_pairs = []
+        # wait for long enough. the more VM, more time it takes.
+        for retry in range(max(6, vm_num)):
             time.sleep(10)
 
             # request cluster info
-            with open(Config.ATTRIBUTES["GCE_info_output"], "w") as gce_info_output_file:
-                gce_info_cmd = "gce info {0}".format(cluster_name)
+            with open(Config.ATTRIBUTES["gce_info_output"], "w") as gce_info_output_file:
+                gce_info_cmd = "gce info {0}".format(name)
                 subprocess.call(["ssh", "-o", "StrictHostKeyChecking=no", "-i", gce_key, gce_login, gce_info_cmd], \
                                 stdout=gce_info_output_file)
 
-            VM_list = self.__extract_VM_FQDN_IP__(Config.ATTRIBUTES["GCE_info_output"])
+            fqdn_ip_pairs = self._extract_vm_fqdn_ip(Config.ATTRIBUTES["gce_info_output"])
 
-            if len(VM_list) == vms_num:
-                Log.write("Get info for all ", str(len(VM_list)), " VMs successfully")
+            if len(fqdn_ip_pairs) == vm_num:
+                Log.write("Get info for all ", str(len(fqdn_ip_pairs)), " VMs successfully")
                 break
-            Log.write("Only get info for ", str(len(VM_list)), " VMs, retry ... ...")
-        Log.write("cluster info is saved to file ", Config.ATTRIBUTES["GCE_info_output"])
+            Log.write("Only get info for ", str(len(fqdn_ip_pairs)), " VMs, retry ... ...")
+        return fqdn_ip_pairs
+
+    def request_ambari_server_vm(self, name):
+        # only 1 ambari server
+        vm_num = 1
+        gce_vm_type = Config.ATTRIBUTES["ambari_server_vm_type"]
+        gce_vm_os = Config.ATTRIBUTES["ambari_server_vm_os"]
+
+        gce_extra_cmd=""
+        if "ambari_server_vm_extra" in Config.ATTRIBUTES:
+            gce_extra_cmd = Config.ATTRIBUTES["ambari_server_vm_extra"]
+
+        fqdn_ip_pairs = self.request_vm(name, vm_num, gce_vm_type, gce_vm_os, gce_extra_cmd)
+        return fqdn_ip_pairs
+
+    def reqeust_service_server_vm(self, vm_num, name):
+        gce_vm_type = Config.ATTRIBUTES["service_server_vm_type"]
+        gce_vm_os = Config.ATTRIBUTES["service_server_vm_os"]
+
+        gce_extra_cmd=""
+        if "service_server_vm_extra" in Config.ATTRIBUTES:
+            gce_extra_cmd = Config.ATTRIBUTES["service_server_vm_extra"]
+
+        fqdn_ip_pairs = self.request_vm(name, vm_num, gce_vm_type, gce_vm_os, gce_extra_cmd)
+        return fqdn_ip_pairs
+
+    def reqeust_agent_vm(self, vm_num, name):
+        gce_vm_type = Config.ATTRIBUTES["ambari_agent_vm_type"]
+        gce_vm_os = Config.ATTRIBUTES["ambari_agent_vm_os"]
+        gce_extra_disk=""
+        if "ambari_agent_vm_extra_disk" in Config.ATTRIBUTES:
+            gce_extra_disk = Config.ATTRIBUTES["ambari_agent_vm_extra_disk"]
+
+        fqdn_ip_pairs = self.request_vm(name, vm_num, gce_vm_type, gce_vm_os, gce_extra_disk)
+        return fqdn_ip_pairs
+
+
+    def request_gce_cluster(self, ambari_agent_vm_num, docker_num, service_server_num, with_ambari_server, cluster_name):
+
+        ambari_server_fqdn_ip_pairs = []
+        if with_ambari_server == True:
+            ambari_server_fqdn_ip_pairs = self.request_ambari_server_vm(VM.get_ambari_server_vm_name(cluster_name))
+        service_server_fqdn_ip_pairs = self.reqeust_service_server_vm(service_server_num,
+                                                                      VM.get_service_server_vm_name(cluster_name))
+        ambari_agent_fqdn_ip_pairs = self.reqeust_agent_vm(ambari_agent_vm_num, VM.get_ambari_agent_vm_name(cluster_name))
 
         # prepare all attributes of the cluster, write to a file
-        self.generate_cluster_info(VM_list, cluster_name, docker_num)
-        self.overwrite_to_file(Config.ATTRIBUTES["cluster_info_file"])
+        self.generate_cluster_info(cluster_name, ambari_server_fqdn_ip_pairs, service_server_fqdn_ip_pairs,
+                                   ambari_agent_fqdn_ip_pairs, docker_num)
+        data = Data()
+        data.add_new_cluster(self)
+        state = {"state_name": Cluster.STATE_FREE}
+        data.set_cluster_state(cluster_name, state)
 
-    def overwrite_to_file(self, filename):
-        """
-        save the information of the cluster to file
-        :param filename: the name of the file to save the cluter information
-        :return: None
-        """
-        with open(filename, "w") as file:
-            file.write("cluster_name: {0}\n".format(self.cluster_name))
-            file.write("VMs_num: {0}\n".format(self.VMs_num))
-
-            for vm in self.VM_list:
-                file.write("\t\tVM_IP: {0}\n".format(vm.external_ip))
-                file.write("\t\tVM_domain_name: {0}\n".format(vm.domain_name ))
-                file.write("\t\tWeave_DNS_IP: {0}\n".format(vm.Weave_DNS_IP))
-                file.write("\t\tDocker_num: {0}\n".format(len(vm.docker_list)))
-                for docker in vm.docker_list:
-                    file.write("\t\t\t\t{0}/{1} {2}\n".format(docker.IP, docker.mask, docker.Weave_domain_name))
-
-    def __increase_IP__(self, base_IP, increase):
-        """
-        increase the IP address.
-        example: 192.168.1.1, increased by 1: 192.168.1.2
-        example: 192.168.1.254, increased by 2: 192.168.2.1
-        :param base_IP: the IP to be increased
-        :param increase: the amount of increase
-        :return: the new IP address, in a integer List
-        """
-        IP = [int(base_IP[0]), int(base_IP[1]), int(base_IP[2]), int(base_IP[3])]
-        IP[3] = IP[3] + increase
-        for index in reversed(range(0, 4)):
-            if IP[index] > 255:
-                IP[index - 1] = IP[index - 1] + IP[index] / 256
-                IP[index] = IP[index] % 256
-        return IP
-
-    def generate_cluster_info(self, VM_list, cluster_name, docker_num):
+    def generate_cluster_info(self, cluster_name, ambari_server_fqdn_ip_pairs, service_server_fqdn_ip_pairs,
+                              ambari_agent_fqdn_ip_pairs, docker_num):
         """
         generate VM and docker info for this cluster
         set up parameter of the class instance as this info
@@ -174,96 +212,110 @@ class Cluster:
         :param docker_num: the number of Docker containers inside each VM
         :return: None
         """
-        Docker_IP_base = Config.ATTRIBUTES["Docker_IP_base"].split(".")
-        Docker_IP_mask = Config.ATTRIBUTES["Docker_IP_mask"]
+        weave_ip_base = Config.ATTRIBUTES["weave_ip_base"]
+        weave_ip_mask = Config.ATTRIBUTES["weave_ip_mask"]
+        current_ip = weave_ip_base
 
-        current_IP = Docker_IP_base
-        VM_index = 0
-        for VM_domain_name, VM_IP in VM_list:
-            current_IP = self.__increase_IP__(current_IP, 1)
-            Weave_DNS_IP = "{0}.{1}.{2}.{3}".format(current_IP[0], current_IP[1], current_IP[2], current_IP[3])
-            vm = VM(VM_IP, VM_domain_name, Weave_DNS_IP)
+        for vm_domain_name, vm_ip in ambari_server_fqdn_ip_pairs:
+            current_ip = self._increase_ip(current_ip, 1)
+            weave_dns_ip = current_ip
+            vm = VM(vm_ip, vm_domain_name, weave_dns_ip, weave_ip_mask)
+            current_ip = self._increase_ip(current_ip, 1)
+            vm.weave_internal_ip = current_ip
+            self.ambari_server_vm.append(vm)
 
-            for Docker_index in range(0, docker_num):
-                current_IP = self.__increase_IP__(current_IP, 1)
-                docker_IP_str = "{0}.{1}.{2}.{3}".format(current_IP[0], current_IP[1], current_IP[2], current_IP[3])
+        for vm_domain_name, vm_ip in service_server_fqdn_ip_pairs:
+            current_ip = self._increase_ip(current_ip, 1)
+            weave_dns_ip = current_ip
+            vm = VM(vm_ip, vm_domain_name, weave_dns_ip, weave_ip_mask)
+            current_ip = self._increase_ip(current_ip, 1)
+            vm.weave_internal_ip = current_ip
+            self.service_server_vm_list.append(vm)
 
-                total_Docker_index = VM_index * docker_num + Docker_index
-                docker_hostname = Docker.get_Weave_domain_name(cluster_name, total_Docker_index)
+        vm_index = 0
+        for vm_domain_name, vm_ip in ambari_agent_fqdn_ip_pairs:
+            current_ip = self._increase_ip(current_ip, 1)
+            weave_dns_ip = current_ip
+            vm = VM(vm_ip, vm_domain_name, weave_dns_ip, weave_ip_mask)
 
-                docker = Docker(docker_IP_str, str(Docker_IP_mask), docker_hostname)
-                # print docker
+            for docker_index in range(0, docker_num):
+                current_ip = self._increase_ip(current_ip, 1)
+                docker_ip_str = current_ip
+
+                total_docker_index = vm_index * docker_num + docker_index
+                docker_domain_name = Docker.get_weave_domain_name(cluster_name, total_docker_index)
+
+                docker = Docker(docker_ip_str, str(weave_ip_mask), docker_domain_name)
                 vm.add_docker(docker)
 
-            VM_index = VM_index + 1
-            self.VM_list.append(vm)
+            vm_index = vm_index + 1
+            self.ambari_agent_vm_list.append(vm)
 
-        self.VMs_num = len(VM_list)
         self.cluster_name = cluster_name
 
-    def run_docker_on_cluster(self, server_external_IP, server_Weave_IP):
+        # update config file
+        Config.update("weave", "weave_ip_base", current_ip)
+
+    def _increase_ip(self, base_ip_str, increase):
         """
-        run all dockers for all the VMs in the cluster
-        upload necessary file to each machine in cluster, run launcher_docker.py in each machine with parameter
-        :param server_external_IP: the external IP address of ambari-server
-        :param server_Weave_IP: the Weave internal IP address of ambari-server
-        :return: None
+        increase the IP address.
+        example: 192.168.1.1, increased by 1: 192.168.1.2
+        example: 192.168.1.254, increased by 2: 192.168.2.1
+        :param base_IP: the IP to be increased
+        :param increase: the amount of increase
+        :return: the new IP address, in a integer List
         """
-        VM_output_file_list = []
-        process_list = []
-        terminate_state_list = []
+        base_ip = base_ip_str.split(".")
+        new_ip = [int(base_ip[0]), int(base_ip[1]), int(base_ip[2]), int(base_ip[3])]
+        new_ip[3] = new_ip[3] + increase
+        for index in reversed(range(0, 4)):
+            if new_ip[index] > 255:
+                new_ip[index - 1] = new_ip[index - 1] + new_ip[index] / 256
+                new_ip[index] = new_ip[index] % 256
+        return "{0}.{1}.{2}.{3}".format(new_ip[0], new_ip[1], new_ip[2], new_ip[3])
 
-        for vm in self.VM_list:
-            # open file for the output
-            VM_output_file_path = vm.__get_SSH_output_file_path__()
-            VM_output_file = open(VM_output_file_path, "w")
-            VM_output_file_list.append(VM_output_file)
 
-            # upload necessary file to each machine in cluster
-            VM_external_IP = vm.external_ip
-            VM_directory = "{0}@{1}:{2}".format(Config.ATTRIBUTES["VM_user"], VM_external_IP, Config.ATTRIBUTES["VM_code_directory"])
-            VM_key = Config.ATTRIBUTES["VM_key_file"]
+    def _scp_upload(self, vm_external_ip):
+        # upload necessary file to VM
+        vm_directory = "{0}@{1}:{2}".format(Config.ATTRIBUTES["vm_user"], vm_external_ip,
+                                            Config.ATTRIBUTES["vm_code_directory"])
+        vm_key = Config.ATTRIBUTES["vm_key_file"]
 
-            upload_return_code = 0
-            with open(os.devnull, 'w') as shutup:
-                upload_return_code = subprocess.call(["scp", "-o", "StrictHostKeyChecking=no", "-i", VM_key, "-r", ".", VM_directory], \
-                            stdout=shutup, stderr=shutup)
-            if upload_return_code == 0:
-                Log.write("VM ", VM_external_IP, " file upload succeed")
-            else:
-                Log.write("VM ", VM_external_IP, " file upload fail")
+        upload_return_code = 0
+        with open(os.devnull, 'w') as shutup:
+            upload_return_code = subprocess.call(["scp", "-o", "StrictHostKeyChecking=no", "-i", vm_key, "-r", ".",
+                                                  vm_directory],stdout=shutup, stderr=shutup)
+        if upload_return_code == 0:
+            Log.write("VM ", vm_external_ip, " file upload succeed")
+        else:
+            Log.write("VM ", vm_external_ip, " file upload fail")
 
-            VM_ssh_login = "{0}@{1}".format(Config.ATTRIBUTES["VM_user"], VM_external_IP)
+    def run_cluster(self, server_weave_ip, server_external_ip):
+        process_list = {}
+        process_list.update(self.run_ambari_server_asyn())
+        process_list.update(self.run_service_server_asyn(server_weave_ip, server_external_ip))
+        process_list.update(self.run_docker_on_cluster_asyn(server_weave_ip, server_external_ip))
 
-            VM_ssh_cd_cmd = "cd {0}".format(Config.ATTRIBUTES["VM_code_directory"])
-            VM_ssh_python_cmd = "python launcher_docker.py {0} {1} {2}".format(VM_external_IP, server_Weave_IP, server_external_IP)
-            VM_ssh_cmd = "{0};{1}".format(VM_ssh_cd_cmd, VM_ssh_python_cmd)
-
-            process = subprocess.Popen(["ssh", "-o", "StrictHostKeyChecking=no", "-t", "-i", VM_key, \
-                                        VM_ssh_login, VM_ssh_cmd], \
-                                       stdout=VM_output_file, stderr=VM_output_file)
-
-            process_list.append(process)
-
-            terminate_state_list.append(False)
-            Log.write("Configuring VM ", vm.external_ip, " ... ...")
+        terminate_state_list = {}
+        for hostname in process_list:
+            terminate_state_list[hostname] = False
 
         Log.write("Wait for all VMs to finish configuration ... ...")
 
         while True:
             all_finished = True
-            for index in range(len(self.VM_list)):
-                if terminate_state_list[index] == False:
+            for hostname in process_list:
+                output_file, output_file_path, process = process_list[hostname]
+                if terminate_state_list[hostname] == False:
                     all_finished = False
-                    returncode = process_list[index].poll()
+                    returncode = process.poll()
                     if returncode is None:
                         continue
                     else:
-                        VM_output_file_path =  self.VM_list[index].__get_SSH_output_file_path__()
-                        Log.write("VM ", self.VM_list[index].external_ip, " configuration completed, return code: ", str(returncode) \
-                            , ", output file path: ", VM_output_file_path)
-                        terminate_state_list[index] = True
-                        VM_output_file_list[index].close()
+                        Log.write("VM ", hostname, " configuration completed, return code: ", str(returncode) \
+                                  , ", output file path: ", output_file_path)
+                        terminate_state_list[hostname] = True
+                        output_file.close()
                 else:
                     pass
             if all_finished:
@@ -271,3 +323,96 @@ class Cluster:
             time.sleep(5)
 
         Log.write("All VM configuration completed.")
+
+    def run_ambari_server_asyn(self):
+        process_list = {}
+
+        for vm in self.ambari_server_vm:
+            vm_external_ip = vm.external_ip
+            self._scp_upload(vm_external_ip)
+
+            vm_output_file_path = vm._get_ssh_output_file_path()
+            vm_output_file = open(vm_output_file_path, "w")
+
+            # ssh install server
+            vm_ssh_login = "{0}@{1}".format(Config.ATTRIBUTES["vm_user"], vm_external_ip)
+            vm_ssh_cd_cmd = "cd {0}".format(Config.ATTRIBUTES["vm_code_directory"])
+            vm_ssh_python_cmd = "python launcher_ambari_server.py {0}".format(self.cluster_name)
+            vm_ssh_cmd = "{0};{1}".format(vm_ssh_cd_cmd, vm_ssh_python_cmd)
+            vm_key = Config.ATTRIBUTES["vm_key_file"]
+            Log.write(vm_ssh_python_cmd)
+
+            process = subprocess.Popen(["ssh", "-o", "StrictHostKeyChecking=no", "-t", "-i", vm_key, \
+                                       vm_ssh_login, vm_ssh_cmd], \
+                                       stdout=vm_output_file, stderr=vm_output_file)
+            process_list[vm.hostname] = (vm_output_file, vm_output_file_path, process)
+            Log.write("Configuring VM ", vm.hostname, " ... ...")
+        return process_list
+
+    def run_service_server_asyn(self, server_weave_ip, server_external_ip):
+        process_list = {}
+
+        for vm in self.service_server_vm_list:
+            vm_external_ip = vm.external_ip
+            self._scp_upload(vm_external_ip)
+
+            vm_output_file_path = vm._get_ssh_output_file_path()
+            vm_output_file = open(vm_output_file_path, "w")
+
+            # ssh install server
+            vm_ssh_login = "{0}@{1}".format(Config.ATTRIBUTES["vm_user"], vm_external_ip)
+            vm_ssh_cd_cmd = "cd {0}".format(Config.ATTRIBUTES["vm_code_directory"])
+            vm_ssh_python_cmd = "python launcher_service_server.py {0} {1} {2} {3}".format( \
+                vm_external_ip, server_weave_ip, server_external_ip, self.cluster_name)
+            vm_ssh_cmd = "{0};{1}".format(vm_ssh_cd_cmd, vm_ssh_python_cmd)
+            vm_key = Config.ATTRIBUTES["vm_key_file"]
+            Log.write(vm_ssh_python_cmd)
+
+            process = subprocess.Popen(["ssh", "-o", "StrictHostKeyChecking=no", "-t", "-i", vm_key, \
+                                        vm_ssh_login, vm_ssh_cmd], \
+                                       stdout=vm_output_file, stderr=vm_output_file)
+
+            process_list[vm.hostname] = (vm_output_file, vm_output_file_path, process)
+            Log.write("Configuring VM ", vm.hostname, " ... ...")
+        return process_list
+
+
+    def run_docker_on_cluster_asyn(self, server_weave_ip, server_external_ip):
+        process_list = {}
+
+        for vm in self.ambari_agent_vm_list:
+            vm_external_ip = vm.external_ip
+            self._scp_upload(vm_external_ip)
+
+            vm_output_file_path = vm._get_ssh_output_file_path()
+            vm_output_file = open(vm_output_file_path, "w")
+
+            vm_ssh_login = "{0}@{1}".format(Config.ATTRIBUTES["vm_user"], vm_external_ip)
+            vm_ssh_cd_cmd = "cd {0}".format(Config.ATTRIBUTES["vm_code_directory"])
+            vm_ssh_python_cmd = "python launcher_docker.py {0} {1} {2} {3}".format( \
+                vm_external_ip, server_weave_ip, server_external_ip, self.cluster_name)
+            vm_ssh_cmd = "{0};{1}".format(vm_ssh_cd_cmd, vm_ssh_python_cmd)
+            vm_key = Config.ATTRIBUTES["vm_key_file"]
+            Log.write(vm_ssh_python_cmd)
+
+            process = subprocess.Popen(["ssh", "-o", "StrictHostKeyChecking=no", "-t", "-i", vm_key, \
+                                        vm_ssh_login, vm_ssh_cmd], \
+                                       stdout=vm_output_file, stderr=vm_output_file)
+
+            process_list[vm.hostname] = (vm_output_file, vm_output_file_path, process)
+            Log.write("Configuring VM ", vm.hostname, " ... ...")
+
+        return process_list
+
+Config.load()
+# cluster = Cluster()
+# cluster.request_gce_cluster(46, 18, 1, False, "cluster1000-b")
+#
+# time.sleep(60)
+
+# cluster = Cluster.load_from_json("cluster1000-a")
+# ambari_server = cluster.get_ambari_server_vm()
+# cluster.run_cluster(ambari_server.weave_internal_ip, ambari_server.external_ip)
+#
+cluster = Cluster.load_from_json("cluster1000-b")
+cluster.run_cluster("192.168.5.0", "104.196.90.238")

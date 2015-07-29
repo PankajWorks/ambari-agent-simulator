@@ -1,4 +1,3 @@
-#!/bin/bash
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information rega4rding copyright ownership.
@@ -14,22 +13,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This script will set the docker use a new partition as its storage
 
-# $1 mount point to other part
+# Set the base image to CentOS 7
+FROM centos:7
 
-mount_point=$1
-docker_dir=/var/lib/docker
+# Copy the files into Docker: launcher_agent.py
+ADD launcher_agent.py /launcher_agent.py
+# Copy the files into Docker: ambari_agent_start.sh
+ADD ambari_agent_start.sh /ambari_agent_start.sh
 
-while [ ! -d "$docker_dir" ]; do
-    echo "$docker_dir does not exist, wait for docker service to create the directory"
-    sleep 5
-done
+RUN chmod 755 /ambari_agent_start.sh
 
-echo "move $docker_dir to partition $mount_point"
+# Install ambari-agent
+RUN yum install -y -q wget
+RUN wget -q -O /etc/yum.repos.d/ambari.repo http://s3.amazonaws.com/dev.hortonworks.com/ambari/centos7/2.x/latest/2.1.1/ambaribn.repo
+RUN yum install -y -q epel-release
+RUN yum install -y -q ambari-agent
 
-service docker stop
-cp -r ${docker_dir}/* $mount_point
-rm -rf $docker_dir
-ln -s $mount_point $docker_dir
-service docker start
+# Clean yum download cache
+RUN yum clean -y all

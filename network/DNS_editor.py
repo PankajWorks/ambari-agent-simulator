@@ -41,5 +41,7 @@ with open(nameserver_file_name, "w") as f:
                 f.write("\n")
                 add_nameserver = True
             f.write(line)
+        elif "domain" in line:
+            f.write("domain weave.local\n")
         else:
             f.write(line)

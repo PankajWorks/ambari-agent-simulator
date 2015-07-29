@@ -22,30 +22,43 @@ class Docker:
     """
     Docker represents a Docker container, each with its IP and hostname
     """
-    def __init__(self, IP, mask, Weave_domain_name):
-        self.IP = IP
+    def __init__(self, ip, mask, weave_domain_name):
+        self.ip = ip
         self.mask = mask
-        self.Weave_domain_name = Weave_domain_name
+        self.weave_domain_name = weave_domain_name
 
-    def __str__(self):
-        return str(self.IP) + "/" + str(self.mask) + " " + self.Weave_domain_name
+    def to_json(self):
+        docker_json = {}
+        docker_json["weave_ip"] = "{0}/{1}".format(self.ip, self.mask)
+        docker_json["weave_domain_name"] = self.weave_domain_name
+        return docker_json
 
     @staticmethod
-    def get_Weave_domain_name(cluster_name, index):
+    def load_from_json(json_data):
+        ip = json_data["weave_ip"].split("/")[0]
+        mask = json_data["weave_ip"].split("/")[1]
+        weave_domain_name = json_data["weave_domain_name"]
+        return Docker(ip, mask, weave_domain_name)
+
+    def __str__(self):
+        return str(self.ip) + "/" + str(self.mask) + " " + self.weave_domain_name
+
+    @staticmethod
+    def get_weave_domain_name(cluster_name, index):
         """
         given the index and the name of cluster, generate the  Weave domain name for the docker
         :param cluster_name:
         :param index:
         :return: Weave domain name of the docker container
         """
-        return "{0}-{1}-{2}.{3}".format(Config.ATTRIBUTES["Container_hostname_fix"], index, cluster_name, "weave.local")
+        return "{0}-{1}-{2}.{3}".format(Config.ATTRIBUTES["container_hostname_fix"], index, cluster_name, "weave.local")
 
     def get_index(self):
         """
         extract the index of the docker within the cluster
         :return: the index
         """
-        return self.Weave_domain_name.split("-")[1]
+        return self.weave_domain_name.split("-")[1]
 
     def get_container_name(self):
         """
@@ -54,4 +67,4 @@ class Docker:
         return self.get_hostname()
 
     def get_hostname(self):
-        return self.Weave_domain_name.split(".")[0]
+        return self.weave_domain_name.split(".")[0]

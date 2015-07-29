@@ -131,14 +131,15 @@ def main(argv):
         exit(1)
 
     command = argv[1]
-    if command == "all":
-        all(argv)
 
-    elif command == "request":
-        request_cluster(argv)
+    if command == "request":
+        request_cluster(argv[2:])
 
-    elif command == "run":
-        run_cluster(argv)
+    elif command == "up":
+        run_cluster(argv[2:])
+
+    elif command == "merge":
+        run_cluster(argv[2:])
 
     elif command == "help":
         print_help()

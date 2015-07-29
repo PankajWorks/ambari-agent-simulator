@@ -21,14 +21,14 @@
 # $1 <Weave internal IP with mask>
 # $2 <hostname files with all agents>
 
-if [ $# -lt 2 ]; then
+if [ $# -lt 3 ]; then
     echo "usage: ./set_ambari_server_network.sh <Weave internal IP> <Weave DNS IP> <Mask>"
     echo "example: ./set_ambari_server_network.sh 192.168.255.1 192.168.255.2 16"
     exit 1
 fi
 
-Weave_internal_IP=$1
-Weave_DNS_IP=$2
+weave_internal_ip=$1
+weave_dns_ip=$2
 mask=$3
 
 # install weave
@@ -45,11 +45,11 @@ weave reset
 # launch weave
 weave launch
 
-# expose IP
-weave expose ${Weave_internal_IP}/${mask}
-
 # launch Weave DNS
-weave launch-dns ${Weave_DNS_IP}/${mask}
+weave launch-dns ${weave_dns_ip}/${mask}
+
+# expose IP
+weave expose ${weave_internal_ip}/${mask}
 
 # edit /etc/resolv.conf file
-python DNS_editor.py $Weave_DNS_IP
+python dns_editor.py $weave_dns_ip

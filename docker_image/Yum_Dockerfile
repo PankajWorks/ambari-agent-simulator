@@ -17,9 +17,6 @@
 # Set the base image to CentOS 7
 FROM centos:7
 
-# Author
-MAINTAINER Pengcheng_Xu
-
 # Copy the files into Docker: launcher_agent.py
 ADD launcher_agent.py /launcher_agent.py
 # Copy the files into Docker: ambari_agent_start.sh
@@ -31,12 +28,13 @@ RUN chmod 755 /ambari_agent_start.sh
 
 # Install ambari-agent
 RUN yum install -y -q wget
-RUN wget -q -O /etc/yum.repos.d/ambari.repo http://s3.amazonaws.com/dev.hortonworks.com/ambari/centos7/2.x/latest/2.1.0/ambaribn.repo
+RUN wget -q -O /etc/yum.repos.d/ambari.repo http://s3.amazonaws.com/dev.hortonworks.com/ambari/centos7/2.x/latest/2.1.1/ambaribn.repo
 RUN yum install -y -q epel-release
 RUN yum install -y -q ambari-agent
 
 # Set Hadoop Repo
 RUN wget -O /etc/yum.repos.d/hdp.repo http://s3.amazonaws.com/dev.hortonworks.com/HDP/centos7/2.x/updates/2.3.0.0/hdp.repo
+# RUN wget -nv http://public-repo-1.hortonworks.com/HDP/centos7/2.x/updates/2.3.0.0/hdp.repo -O /etc/yum.repos.d/hdp.repo
 
 # Install all package
 RUN yum install -y -q $(cat package_list.txt)

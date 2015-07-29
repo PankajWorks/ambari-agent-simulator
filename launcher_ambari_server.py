@@ -16,28 +16,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 '''
 
-
-import sys
 from config import Config
 from cluster import Cluster
+import sys
 
 if __name__ == "__main__":
     Config.load()
 
-    my_external_ip = sys.argv[1]
-    server_weave_ip = sys.argv[2]
-    server_external_ip = sys.argv[3]
-    cluster_name = sys.argv[4]
-
+    cluster_name = sys.argv[1]
     cluster = Cluster.load_from_json(cluster_name)
 
-    vm_ip_list = []
-    vm_ip_list.append(server_external_ip)
-    for vm in cluster.ambari_agent_vm_list:
-        vm_ip_list.append(vm.external_ip)
-    for vm in cluster.service_server_vm_list:
-        vm_ip_list.append(vm.external_ip)
-
-    vm = cluster.get_agent_vm(my_external_ip)
-    vm.run_docker(server_weave_ip, vm_ip_list)
-
+    vm = cluster.get_ambari_server_vm()
+    vm.run_ambari_server()

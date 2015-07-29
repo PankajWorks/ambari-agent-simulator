@@ -1,3 +1,4 @@
+#!/bin/bash
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information rega4rding copyright ownership.
@@ -13,25 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-# Set the base image to CentOS 7
-FROM centos:7
-
-# Author
-MAINTAINER Pengcheng_Xu
-
-# Copy the files into Docker: launcher_agent.py
-ADD launcher_agent.py /launcher_agent.py
-# Copy the files into Docker: ambari_agent_start.sh
-ADD ambari_agent_start.sh /ambari_agent_start.sh
-
-RUN chmod 755 /ambari_agent_start.sh
-
-# Install ambari-agent
-RUN yum install -y -q wget
-RUN wget -q -O /etc/yum.repos.d/ambari.repo http://s3.amazonaws.com/dev.hortonworks.com/ambari/centos7/2.x/latest/2.1.0/ambaribn.repo
-RUN yum install -y -q epel-release
-RUN yum install -y -q ambari-agent
-
-# Clean yum download cache
-RUN yum clean -y all
+yum install -y -q wget
+wget -q -O /etc/yum.repos.d/ambari.repo http://s3.amazonaws.com/dev.hortonworks.com/ambari/centos7/2.x/latest/2.1.1/ambaribn.repo
+yum install -y -q epel-release
+yum install -y -q ambari-agent

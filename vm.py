@@ -21,19 +21,60 @@ import subprocess
 import shutil
 from config import Config
 import os
+from docker import Docker
+from docker_image.launcher_agent import replace_conf
+
 
 class VM:
     """
     This class represents VM, each VM instance has multiple Docker inside
     """
-    def __init__(self, external_ip, domain_name, Weave_DNS_IP):
+    def __init__(self, external_ip, domain_name, weave_dns_ip, weave_ip_mask):
         self.external_ip = external_ip
         self.domain_name = domain_name
-        self.hostname = self.__GCE_get_hostname__(domain_name)
-        self.Weave_DNS_IP = Weave_DNS_IP
+        self.hostname = self._gce_get_hostname(domain_name)
+        self.weave_domain_name = self._get_weave_domain_name(self.hostname)
+        self.weave_dns_ip = weave_dns_ip
+        self.weave_internal_ip = ""
+        self.weave_ip_mask = weave_ip_mask
         self.docker_list = []
 
-    def __GCE_get_hostname__(self, domain_name):
+    def to_json(self):
+        vm_json = {}
+        vm_json["external_ip"] = self.external_ip
+        vm_json["domain_name"] = self.domain_name
+        vm_json["weave_dns_ip"] = self.weave_dns_ip
+        vm_json["weave_internal_ip"] = self.weave_internal_ip
+        vm_json["weave_domain_name"] = self.weave_domain_name
+        vm_json["weave_ip_mask"] = self.weave_ip_mask
+        vm_json["docker_list"] = []
+        for docker in self.docker_list:
+            vm_json["docker_list"].append(docker.to_json())
+        return vm_json
+
+    @staticmethod
+    def load_from_json(json_data):
+        external_ip = json_data["external_ip"]
+        domain_name = json_data["domain_name"]
+        weave_dns_ip = json_data["weave_dns_ip"]
+        weave_internal_ip = json_data["weave_internal_ip"]
+        weave_domain_name = json_data["weave_domain_name"]
+        weave_ip_mask = json_data["weave_ip_mask"]
+        docker_list = []
+        for json_docker in json_data["docker_list"]:
+            docker_list.append(Docker.load_from_json(json_docker))
+
+        vm = VM(external_ip, domain_name, weave_dns_ip, weave_ip_mask)
+        vm.docker_list = docker_list
+        vm.weave_internal_ip = weave_internal_ip
+        vm.weave_domain_name = weave_domain_name
+        return vm
+
+    def _get_weave_domain_name(self, hostname):
+        return "{0}.weave.local".format(hostname)
+
+
+    def _gce_get_hostname(self, domain_name):
         """
         The hostname of GCE VM is the first part of the internal domain name
         :param domain_name: the internal domain name of GCE VM
@@ -41,15 +82,15 @@ class VM:
         """
         return domain_name.split(".")[0]
 
-    def __get_SSH_output_file_path__(self):
-        VM_output_file_path = "{0}/VM-{1}-{2}".format(Config.ATTRIBUTES["Output_folder"], self.hostname, self.external_ip)
+    def _get_ssh_output_file_path(self):
+        VM_output_file_path = "{0}/vm-{1}-{2}".format(Config.ATTRIBUTES["output_folder"], self.hostname, self.external_ip)
         return VM_output_file_path
 
 
     def add_docker(self, docker):
         self.docker_list.append(docker)
 
-    def __centos7_weave_install__(self):
+    def _centos7_weave_install(self):
         """
         install Weave on this VM
         :return: None
@@ -57,26 +98,28 @@ class VM:
         subprocess.call(["sudo", "chmod", "755", "Linux/CentOS7/weave_install.sh"])
         subprocess.call("./Linux/CentOS7/weave_install.sh")
 
-    def __set_weave_network__(self, VMs_external_IP_list, server_external_ip, Weave_DNS_IP):
+    def _set_weave_network(self, vm_external_ip_list, weave_dns_ip):
         """
         launch Weave, make this VM connect with other VM
-        :param VMs_external_IP_list: external IP List of all VMs
+        :param vm_external_ip_list: external IP List of all VMs
         :param server_external_ip: the external IP of the Ambari-server
         :return: None
         """
         # add other VMs and the ambari-server to set up connections
         weave_launch_command = ["sudo", "weave", "launch"]
-        weave_launch_command.extend(VMs_external_IP_list)
-        weave_launch_command.append(server_external_ip)
+        weave_launch_command.extend(vm_external_ip_list)
+
+        print weave_launch_command
+
         with open(os.devnull, 'w') as shutup:
             subprocess.call(weave_launch_command, stdout=shutup)
 
         # establish DNS server
-        Weave_DNS_IP_with_mask = "{0}/{1}".format(Weave_DNS_IP, Config.ATTRIBUTES["Docker_IP_mask"])
-        weave_launch_DNS_command = ["sudo", "weave", "launch-dns", Weave_DNS_IP_with_mask]
-        subprocess.call(weave_launch_DNS_command)
+        weave_dns_ip_with_mask = "{0}/{1}".format(weave_dns_ip, Config.ATTRIBUTES["weave_ip_mask"])
+        weave_launch_dns_command = ["sudo", "weave", "launch-dns", weave_dns_ip_with_mask]
+        subprocess.call(weave_launch_dns_command)
 
-    def __centos7_docker_install__(self):
+    def _centos7_docker_install(self):
         """
         install Docker on this VM
         :return: None
@@ -84,25 +127,25 @@ class VM:
         subprocess.call(["sudo", "chmod", "755", "Linux/CentOS7/docker_install.sh"])
         subprocess.call("./Linux/CentOS7/docker_install.sh")
 
-    def __build_docker_image__(self, image_name):
+    def _build_docker_image(self, image_name):
         """
         build docker image
         :param image_name: the name of the Docker image
         :return: None
         """
         # choose the right Dockerfile
-        target_Dockerfile_name = "Docker/{0}".format(Config.ATTRIBUTES["Dockerfile_name"])
-        standard_Dockerfile_name = "Docker/Dockerfile"
-        shutil.copyfile(target_Dockerfile_name, standard_Dockerfile_name)
+        target_dockerfile_name = "docker_image/{0}".format(Config.ATTRIBUTES["dockerfile_name"])
+        standard_dockerfile_name = "docker_image/Dockerfile"
+        shutil.copyfile(target_dockerfile_name, standard_dockerfile_name)
         with open(os.devnull, 'w') as shutup:
-            subprocess.call(["sudo", "docker", "build", "-q", "-t", image_name, "Docker/"], stdout=shutup)
-        os.remove(standard_Dockerfile_name)
+            subprocess.call(["sudo", "docker", "build", "-q", "-t", image_name, "docker_image/"], stdout=shutup)
+        os.remove(standard_dockerfile_name)
 
-    def __pull_docker_image__(self, image_name):
+    def _pull_docker_image(self, image_name):
         with open(os.devnull, 'w') as shutup:
             subprocess.call(["sudo", "docker", "pull", image_name], stdout=shutup)
 
-    def __launch_containers__(self, docker_image, server_weave_ip):
+    def _launch_containers(self, docker_image, server_weave_ip):
         """
         launch Docker containers, issue the script to install, configure and launch Agent inside Docker.
         :param docker_image: the name of the Docker image
@@ -111,17 +154,17 @@ class VM:
         """
         # print docker_ip_list
         for docker in self.docker_list:
-            docker_IP_with_mask = "{0}/{1}".format(docker.IP, docker.mask)
-            cmd = "python /launcher_agent.py {0} {1}; /bin/bash".format(server_weave_ip, docker.IP)
+            docker_ip_with_mask = "{0}/{1}".format(docker.ip, docker.mask)
+            cmd = "python /launcher_agent.py {0} {1}; /bin/bash".format(server_weave_ip, docker.ip)
 
-            command = ["sudo", "weave", "run", docker_IP_with_mask, "-d", "-it", \
-                       "-h", docker.Weave_domain_name, \
+            command = ["sudo", "weave", "run", docker_ip_with_mask, "-d", "-it", \
+                       "-h", docker.weave_domain_name, \
                        "--name", docker.get_container_name(), \
                        docker_image, "bash", "-c", cmd]
             print command
             subprocess.call(command)
 
-    def __set_docker_partition__(self, mount_point):
+    def _set_docker_partition(self, mount_point):
         """
         set docker container use the disk storage of other partitions.
         :param mount_point: the mount point of the partion to be used
@@ -130,7 +173,42 @@ class VM:
         subprocess.call(["sudo", "chmod", "755", "./Linux/CentOS7/set_docker_partition.sh"])
         subprocess.call(["./Linux/CentOS7/set_docker_partition.sh", mount_point])
 
-    def run_docker(self, server_weave_IP, server_external_IP, cluster):
+    def run_ambari_server(self):
+        # set up network, run script inside the network directory
+        os.chdir("network")
+        subprocess.call(["sudo", "chmod", "755", "set_ambari_server_network.sh"])
+        subprocess.call(["./set_ambari_server_network.sh", self.weave_internal_ip,
+                         self.weave_dns_ip, self.weave_ip_mask])
+        os.chdir("..")
+
+        # install ambari server and start service
+        subprocess.call(["sudo", "chmod", "755", "./server/ambari_server_install.sh"])
+        subprocess.call(["./server/ambari_server_install.sh"])
+
+        # start service
+        # subprocess.call(["sudo", "chmod", "755", "./server/ambari_server_start.sh"])
+        # subprocess.call(["./server/ambari_server_start.sh"])
+        subprocess.call(["sudo", "ambari-server", "start"])
+
+    def run_service_server(self, ambari_server_weave_ip, ambari_server_external_ip):
+        # set up network, run script inside the network directory
+        os.chdir("network")
+        subprocess.call(["sudo", "chmod", "755", "set_host_network.sh"])
+        subprocess.call(["./set_host_network.sh", self.weave_internal_ip,
+                         self.weave_dns_ip, self.weave_ip_mask, self.hostname, self.weave_domain_name, ambari_server_external_ip])
+        os.chdir("..")
+
+        # install ambari agent and start service
+        subprocess.call(["sudo", "chmod", "755", "./docker_image/ambari_agent_install.sh"])
+        subprocess.call(["./docker_image/ambari_agent_install.sh"])
+        replace_conf(ambari_server_weave_ip)
+
+        # start service
+        # subprocess.call(["sudo", "chmod", "755", "./docker_image/ambari_agent_start.sh"])
+        # subprocess.call(["./docker_image/ambari_agent_start.sh"])
+        subprocess.call(["sudo", "ambari-agent", "start"])
+
+    def run_docker(self, server_weave_ip, vm_ip_list):
         """
         run all Docker containers with Ambari-agent inside
         :param server_weave_IP: Weave internal IP of Ambari-server
@@ -138,22 +216,33 @@ class VM:
         :param cluster: the cluster instance
         :return: None
         """
-        VMs_IP_list = []
-        for vm in cluster.VM_list:
-            VMs_IP_list.append(vm.external_ip)
+        # each docker vm connect to each other, service VM (and ambari-server)
 
-        self.__centos7_docker_install__()
 
-        if "Use_partition" in Config.ATTRIBUTES:
-            self.__set_docker_partition__(Config.ATTRIBUTES["Use_partition"])
+        self._centos7_docker_install()
 
-        self.__centos7_weave_install__()
+        if "use_partition" in Config.ATTRIBUTES:
+            self._set_docker_partition(Config.ATTRIBUTES["use_partition"])
 
-        image_name = Config.ATTRIBUTES["Docker_image_name"]
-        if "Pull_Docker_Hub" in Config.ATTRIBUTES and Config.ATTRIBUTES["Pull_Docker_Hub"] == "yes":
-            self.__pull_docker_image__(image_name)
+        self._centos7_weave_install()
+
+        image_name = Config.ATTRIBUTES["docker_image_name"]
+        if "pull_docker_hub" in Config.ATTRIBUTES and Config.ATTRIBUTES["pull_docker_hub"] == "yes":
+            self._pull_docker_image(image_name)
         else:
-            self.__build_docker_image__(image_name)
+            self._build_docker_image(image_name)
 
-        self.__set_weave_network__(VMs_IP_list, server_external_IP, self.Weave_DNS_IP)
-        self.__launch_containers__(Config.ATTRIBUTES["Docker_image_name"], server_weave_IP)
+        self._set_weave_network(vm_ip_list, self.weave_dns_ip)
+        self._launch_containers(Config.ATTRIBUTES["docker_image_name"], server_weave_ip)
+
+    @staticmethod
+    def get_ambari_agent_vm_name(cluster_name):
+        return "{0}-agent-vm".format(cluster_name)
+
+    @staticmethod
+    def get_ambari_server_vm_name(cluster_name):
+        return "{0}-ambari-server".format(cluster_name)
+
+    @staticmethod
+    def get_service_server_vm_name(cluster_name):
+        return "{0}-service-server".format(cluster_name)
