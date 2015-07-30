@@ -46,13 +46,21 @@ class Data:
         json_data["clusters"].insert(0, new_cluster_json)
         self._save_data(json_data)
 
-    def set_cluster_state(self, cluster_name, state):
+    def set_cluster_state(self, cluster_name, state_name):
         json_data = self._load_data()
         for cluster in json_data["clusters"]:
             if cluster["cluster_name"] == cluster_name:
+                state = {"state_name": state_name}
                 cluster["state"] = state
                 break
         self._save_data(json_data)
+
+    def get_cluster_state(self, cluster_name):
+        json_data = self._load_data()
+        for cluster in json_data["clusters"]:
+            if cluster["cluster_name"] == cluster_name:
+                return cluster["state"]["state_name"]
+        return None
 
     def read_cluster_json(self, cluster_name):
         json_data = self._load_data()

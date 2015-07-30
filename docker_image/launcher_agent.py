@@ -26,6 +26,7 @@ def replace_conf(server_ip):
     :param server_ip: internal Weave IP address of Ambari-server
     :return: None
     """
+    lines = []
     with open("/etc/ambari-agent/conf/ambari-agent.ini") as f:
         lines = f.readlines()
 

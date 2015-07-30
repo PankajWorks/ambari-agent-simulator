@@ -56,6 +56,7 @@ class Cluster:
     def get_ambari_server_vm(self):
         for vm in cluster.ambari_server_vm:
             return vm
+        return None
 
     def get_service_server_vm(self, vm_ip):
         for vm in cluster.service_server_vm_list:
@@ -199,8 +200,7 @@ class Cluster:
                                    ambari_agent_fqdn_ip_pairs, docker_num)
         data = Data()
         data.add_new_cluster(self)
-        state = {"state_name": Cluster.STATE_FREE}
-        data.set_cluster_state(cluster_name, state)
+
 
     def generate_cluster_info(self, cluster_name, ambari_server_fqdn_ip_pairs, service_server_fqdn_ip_pairs,
                               ambari_agent_fqdn_ip_pairs, docker_num):
@@ -403,16 +403,3 @@ class Cluster:
             Log.write("Configuring VM ", vm.hostname, " ... ...")
 
         return process_list
-
-Config.load()
-# cluster = Cluster()
-# cluster.request_gce_cluster(46, 18, 1, False, "cluster1000-b")
-#
-# time.sleep(60)
-
-# cluster = Cluster.load_from_json("cluster1000-a")
-# ambari_server = cluster.get_ambari_server_vm()
-# cluster.run_cluster(ambari_server.weave_internal_ip, ambari_server.external_ip)
-#
-cluster = Cluster.load_from_json("cluster1000-b")
-cluster.run_cluster("192.168.5.0", "104.196.90.238")

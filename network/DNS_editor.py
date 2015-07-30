@@ -21,6 +21,7 @@ import sys
 local_Weave_DNS_IP = sys.argv[1]
 nameserver_file_name = "/etc/resolv.conf"
 
+lines = []
 with open(nameserver_file_name) as f_read:
     lines = f_read.readlines()
 
