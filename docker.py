@@ -20,7 +20,7 @@ from config import Config
 
 class Docker:
     """
-    Docker represents a Docker container, each with its IP and hostname
+    Docker represents a Docker container, each with its IP and domain name
     """
     def __init__(self, ip, mask, weave_domain_name):
         self.ip = ip
@@ -28,6 +28,10 @@ class Docker:
         self.weave_domain_name = weave_domain_name
 
     def to_json(self):
+        """
+        create a map to hold the information of the Docker instance
+        :return: A map, which is JSON format object.
+        """
         docker_json = {}
         docker_json["weave_ip"] = "{0}/{1}".format(self.ip, self.mask)
         docker_json["weave_domain_name"] = self.weave_domain_name
@@ -35,6 +39,11 @@ class Docker:
 
     @staticmethod
     def load_from_json(json_data):
+        """
+        load the docker information from a JSON object
+        :param json_data: a map, which is a JSON object
+        :return: a Docker object
+        """
         ip = json_data["weave_ip"].split("/")[0]
         mask = json_data["weave_ip"].split("/")[1]
         weave_domain_name = json_data["weave_domain_name"]
@@ -47,11 +56,16 @@ class Docker:
     def get_weave_domain_name(cluster_name, index):
         """
         given the index and the name of cluster, generate the  Weave domain name for the docker
-        :param cluster_name:
-        :param index:
+        :param cluster_name: the name of the cluster
+        :param index: a number
         :return: Weave domain name of the docker container
         """
-        return "{0}-{1}-{2}.{3}".format(Config.ATTRIBUTES["container_hostname_fix"], index, cluster_name, "weave.local")
+        return "{0}-{1}-{2}.{3}".format(Config.ATTRIBUTES["container_hostname_fix"],
+                                        index, cluster_name, "weave.local")
+
+    @staticmethod
+    def get_pattern_presentation(cluster_name, range_str):
+        return Docker.get_weave_domain_name(cluster_name, range_str)
 
     def get_index(self):
         """

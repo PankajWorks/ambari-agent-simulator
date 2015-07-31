@@ -16,6 +16,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 '''
 
+# This script will modify the /etc/resolv.conf
+# A new DNS is added as the first entry of "nameserver"
+# the domain is set to be Weave local domain, which is "weave.local"
+# set the Weave local domain as the first entry of "search"
+
 import sys
 
 local_Weave_DNS_IP = sys.argv[1]

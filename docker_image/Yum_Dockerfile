@@ -13,28 +13,40 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 # Set the base image to CentOS 7
 FROM centos:7
 
-# Copy the files into Docker: launcher_agent.py
-ADD launcher_agent.py /launcher_agent.py
-# Copy the files into Docker: ambari_agent_start.sh
-ADD ambari_agent_start.sh /ambari_agent_start.sh
-# Copy the files into Docker: package_list.sh
-ADD package_list.txt /package_list.txt
+#====================================set SSH service====================================================================
+RUN yum -y -q install openssh-server epel-release openssh-clients&& \
+    yum -y -q install pwgen && \
+    rm -f /etc/ssh/ssh_host_ecdsa_key /etc/ssh/ssh_host_rsa_key && \
+    ssh-keygen -q -N "" -t dsa -f /etc/ssh/ssh_host_ecdsa_key && \
+    ssh-keygen -q -N "" -t rsa -f /etc/ssh/ssh_host_rsa_key && \
+    sed -i "s/#UsePrivilegeSeparation.*/UsePrivilegeSeparation no/g" /etc/ssh/sshd_config
 
-RUN chmod 755 /ambari_agent_start.sh
+ADD ssh_service/set_root_pw.sh /set_root_pw.sh
+ADD ssh_service/run.sh /run_ssh.sh
+RUN chmod +x /*.sh
+
+ENV AUTHORIZED_KEYS **None**
+ENV ROOT_PASS ambariagent
+#====================================set SSH service====================================================================
+
+
+# Copy the files into Docker
+ADD launcher_agent.py /launcher_agent.py
+ADD ambari_agent_start.sh /ambari_agent_start.sh
+ADD package_list.txt /package_list.txt
+ADD ambari_agent_install.sh /ambari_agent_install.sh
+
+RUN chmod 755 /ambari_agent_start.sh && \
+    chmod 755 /ambari_agent_install.sh
 
 # Install ambari-agent
-RUN yum install -y -q wget
-RUN wget -q -O /etc/yum.repos.d/ambari.repo http://s3.amazonaws.com/dev.hortonworks.com/ambari/centos7/2.x/latest/2.1.1/ambaribn.repo
-RUN yum install -y -q epel-release
-RUN yum install -y -q ambari-agent
+RUN /ambari_agent_install.sh
 
 # Set Hadoop Repo
 RUN wget -O /etc/yum.repos.d/hdp.repo http://s3.amazonaws.com/dev.hortonworks.com/HDP/centos7/2.x/updates/2.3.0.0/hdp.repo
-# RUN wget -nv http://public-repo-1.hortonworks.com/HDP/centos7/2.x/updates/2.3.0.0/hdp.repo -O /etc/yum.repos.d/hdp.repo
 
 # Install all package
 RUN yum install -y -q $(cat package_list.txt)

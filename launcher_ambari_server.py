@@ -20,7 +20,15 @@ from config import Config
 from cluster import Cluster
 import sys
 
+# configure the VM to run Ambari-server and set Weave network
+# argv 1: the name of cluster
+
 if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print "configure the VM to run Ambari-server and set Weave network"
+        print "Arg: <the name of cluster>"
+        exit(1)
+
     Config.load()
 
     cluster_name = sys.argv[1]

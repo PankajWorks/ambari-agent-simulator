@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information rega4rding copyright ownership.
@@ -13,22 +15,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+if [ "${AUTHORIZED_KEYS}" != "**None**" ]; then
+    echo "=> Found authorized keys"
+    mkdir -p /root/.ssh
+    chmod 700 /root/.ssh
+    touch /root/.ssh/authorized_keys
+    chmod 600 /root/.ssh/authorized_keys
+    IFS=$'\n'
+    arr=$(echo ${AUTHORIZED_KEYS} | tr "," "\n")
+    for x in $arr
+    do
+        x=$(echo $x |sed -e 's/^ *//' -e 's/ *$//')
+        cat /root/.ssh/authorized_keys | grep "$x" >/dev/null 2>&1
+        if [ $? -ne 0 ]; then
+            echo "=> Adding public key to /root/.ssh/authorized_keys: $x"
+            echo "$x" >> /root/.ssh/authorized_keys
+        fi
+    done
+fi
 
-# Set the base image to CentOS 7
-FROM centos:7
-
-# Copy the files into Docker: launcher_agent.py
-ADD launcher_agent.py /launcher_agent.py
-# Copy the files into Docker: ambari_agent_start.sh
-ADD ambari_agent_start.sh /ambari_agent_start.sh
-
-RUN chmod 755 /ambari_agent_start.sh
-
-# Install ambari-agent
-RUN yum install -y -q wget
-RUN wget -q -O /etc/yum.repos.d/ambari.repo http://s3.amazonaws.com/dev.hortonworks.com/ambari/centos7/2.x/latest/2.1.1/ambaribn.repo
-RUN yum install -y -q epel-release
-RUN yum install -y -q ambari-agent
-
-# Clean yum download cache
-RUN yum clean -y all
+if [ ! -f /.root_pw_set ]; then
+	/set_root_pw.sh
+fi
+exec /usr/sbin/sshd -D

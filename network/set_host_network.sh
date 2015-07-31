@@ -15,7 +15,15 @@
 # limitations under the License.
 
 # This script is used to add a Host/VM to the Docker network
-# for example, an Ambari-agent withn a VM (not in a Docker container)
+# for example, an Ambari-agent within a VM (not in a Docker container)
+
+# run this script with root
+# $1 <Weave internal IP of the VM>
+# $2 <Weave DNS IP of the VM>
+# $3 <Subnet mask of Weave network>
+# $4 <The host name of this VM inside the Weave network>
+# $5 <The domain name of this VM inside the Weave network>, which is supposed to be end with "weave.local"
+# $6 <External IP address of Ambari server>
 
 if [ $# -lt 6 ]; then
     echo "usage: ./set_ambari_server_network.sh <Weave internal IP> <Weave DNS IP> <Mask> <Weave host name> <Weave domain name> <Ambari server IP>"
@@ -51,10 +59,10 @@ weave launch-dns ${weave_dns_ip}/${mask}
 # MUST use one expose command to set both ip and domain name, OR the domain name will not be bind to this weave internal IP
 weave expose ${weave_internal_ip}/${mask} -h $weave_domain_name
 
-# edit /etc/resolv.conf file
+# set domain name resolution
 python dns_editor.py $weave_dns_ip
 
-# add local IP, hostname, domain name mapping
+# add Weave local IP, host name, domain name mapping
 content="$(cat /etc/hosts)"
 echo "${weave_internal_ip} ${weave_domain_name} ${weave_host_name}" > /etc/hosts
 echo "$content" >> /etc/hosts

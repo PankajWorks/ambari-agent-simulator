@@ -53,6 +53,13 @@ class Config:
 
     @staticmethod
     def update(section, key, value):
+        """
+        Update the key value of the configuration file
+        :param section: section is inside []
+        :param key: the key
+        :param value: the value
+        :return: None
+        """
         config= ConfigParser.RawConfigParser()
         config.read(Config.RELATIVE_CONFIG_FILE_PATH)
         config.set(section, key, value)

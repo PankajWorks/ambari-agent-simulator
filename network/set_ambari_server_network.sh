@@ -20,6 +20,7 @@
 # run this script with root
 # $1 <Weave internal IP with mask>
 # $2 <hostname files with all agents>
+# $3 <Subnet mask of Weave network>
 
 if [ $# -lt 3 ]; then
     echo "usage: ./set_ambari_server_network.sh <Weave internal IP> <Weave DNS IP> <Mask>"
@@ -51,5 +52,5 @@ weave launch-dns ${weave_dns_ip}/${mask}
 # expose IP
 weave expose ${weave_internal_ip}/${mask}
 
-# edit /etc/resolv.conf file
+# set domain name resolution
 python dns_editor.py $weave_dns_ip

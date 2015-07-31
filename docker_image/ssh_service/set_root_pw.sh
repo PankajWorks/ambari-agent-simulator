@@ -1,4 +1,5 @@
 #!/bin/bash
+
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information rega4rding copyright ownership.
@@ -14,6 +15,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# this script will start Ambari agent on Centos 7
+if [ -f /.root_pw_set ]; then
+	echo "Root password already set!"
+	exit 0
+fi
 
-ambari-agent start
+PASS=${ROOT_PASS:-$(pwgen -s 12 1)}
+_word=$( [ ${ROOT_PASS} ] && echo "preset" || echo "random" )
+echo "=> Setting a ${_word} password to the root user"
+echo "root:$PASS" | chpasswd
+
+echo "=> Done!"
+touch /.root_pw_set

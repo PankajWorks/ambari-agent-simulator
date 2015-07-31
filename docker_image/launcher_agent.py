@@ -18,7 +18,6 @@ limitations under the License.
 
 import sys
 import subprocess
-import time
 
 def replace_conf(server_ip):
     """
@@ -35,14 +34,20 @@ def replace_conf(server_ip):
             line = line.replace("hostname=localhost", "hostname=" + server_ip)
             f.write(line)
 
+
+def run_ssh():
+    """
+    run SSH service on this Docker Container
+    :return: None
+    """
+    subprocess.call("/run_ssh.sh")
+
 def run_ambari_agent():
     """
     command line to run Ambari-agent
     :return: None
     """
-    # command = ["sudo", "ambari-agent", "start"]
-    # subprocess.call(command)
-    subprocess.call("./ambari_agent_start.sh")
+    subprocess.call("/ambari_agent_start.sh")
 
 def set_Weave_IP(Weave_IP):
     """
@@ -69,6 +74,7 @@ def main():
     replace_conf(ambari_server_ip)
     set_Weave_IP(my_Weave_IP)
     run_ambari_agent()
+    run_ssh()
 
 if __name__ == "__main__":
     main()

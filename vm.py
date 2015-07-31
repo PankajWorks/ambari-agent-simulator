@@ -27,7 +27,7 @@ from docker_image.launcher_agent import replace_conf
 
 class VM:
     """
-    This class represents VM, each VM instance has multiple Docker inside
+    This class represents VM, including its network setting and the possible Docker instance list
     """
     def __init__(self, external_ip, domain_name, weave_dns_ip, weave_ip_mask):
         self.external_ip = external_ip
@@ -40,6 +40,10 @@ class VM:
         self.docker_list = []
 
     def to_json(self):
+        """
+        create a map to hold the information of the VM instance
+        :return: A map, which is JSON format object.
+        """
         vm_json = {}
         vm_json["external_ip"] = self.external_ip
         vm_json["domain_name"] = self.domain_name
@@ -54,6 +58,11 @@ class VM:
 
     @staticmethod
     def load_from_json(json_data):
+        """
+        load the VM information from a JSON object
+        :param json_data: a map, which is a JSON object
+        :return: a VM object
+        """
         external_ip = json_data["external_ip"]
         domain_name = json_data["domain_name"]
         weave_dns_ip = json_data["weave_dns_ip"]
@@ -71,6 +80,11 @@ class VM:
         return vm
 
     def _get_weave_domain_name(self, hostname):
+        """
+        get the Weave domain name of the VM
+        :param hostname: the hostname of the VM
+        :return:the Weave domain name
+        """
         return "{0}.weave.local".format(hostname)
 
 
@@ -83,11 +97,20 @@ class VM:
         return domain_name.split(".")[0]
 
     def _get_ssh_output_file_path(self):
+        """
+        get the file name to hold the SSH output of the VM
+        :return: a file name
+        """
         VM_output_file_path = "{0}/vm-{1}-{2}".format(Config.ATTRIBUTES["output_folder"], self.hostname, self.external_ip)
         return VM_output_file_path
 
 
     def add_docker(self, docker):
+        """
+        add a Docker instance to the VM instance
+        :param docker: the docker instance
+        :return: None
+        """
         self.docker_list.append(docker)
 
     def _centos7_weave_install(self):
@@ -101,8 +124,8 @@ class VM:
     def _set_weave_network(self, vm_external_ip_list, weave_dns_ip):
         """
         launch Weave, make this VM connect with other VM
-        :param vm_external_ip_list: external IP List of all VMs
-        :param server_external_ip: the external IP of the Ambari-server
+        :param vm_external_ip_list: external IP list of all VMs
+        :param weave_dns_ip: the IP of DNS in this VM
         :return: None
         """
         # add other VMs and the ambari-server to set up connections
@@ -138,7 +161,8 @@ class VM:
         standard_dockerfile_name = "docker_image/Dockerfile"
         shutil.copyfile(target_dockerfile_name, standard_dockerfile_name)
         with open(os.devnull, 'w') as shutup:
-            subprocess.call(["sudo", "docker", "build", "-q", "-t", image_name, "docker_image/"], stdout=shutup)
+            subprocess.call(["sudo", "docker", "build", "-t", image_name, "docker_image/"])
+            # subprocess.call(["sudo", "docker", "build", "-q", "-t", image_name, "docker_image/"], stdout=shutup)
         os.remove(standard_dockerfile_name)
 
     def _pull_docker_image(self, image_name):
@@ -147,12 +171,12 @@ class VM:
 
     def _launch_containers(self, docker_image, server_weave_ip):
         """
-        launch Docker containers, issue the script to install, configure and launch Agent inside Docker.
+        launch Docker containers, issue the script to install,
+        configure and launch Ambari-gent inside Docker.
         :param docker_image: the name of the Docker image
         :param server_weave_ip: Weave internal IP of Ambari-server
         :return: None
         """
-        # print docker_ip_list
         for docker in self.docker_list:
             docker_ip_with_mask = "{0}/{1}".format(docker.ip, docker.mask)
             cmd = "python /launcher_agent.py {0} {1}; /bin/bash".format(server_weave_ip, docker.ip)
@@ -166,14 +190,18 @@ class VM:
 
     def _set_docker_partition(self, mount_point):
         """
-        set docker container use the disk storage of other partitions.
-        :param mount_point: the mount point of the partion to be used
+        set docker container to use the disk storage of other partitions.
+        :param mount_point: the mount point of the partition to be used
         :return: None
         """
         subprocess.call(["sudo", "chmod", "755", "./Linux/CentOS7/set_docker_partition.sh"])
         subprocess.call(["./Linux/CentOS7/set_docker_partition.sh", mount_point])
 
     def run_ambari_server(self):
+        """
+        set up Weave network, run Ambari-server in this VM
+        :return: None
+        """
         # set up network, run script inside the network directory
         os.chdir("network")
         subprocess.call(["sudo", "chmod", "755", "set_ambari_server_network.sh"])
@@ -186,11 +214,15 @@ class VM:
         subprocess.call(["./server/ambari_server_install.sh"])
 
         # start service
-        # subprocess.call(["sudo", "chmod", "755", "./server/ambari_server_start.sh"])
-        # subprocess.call(["./server/ambari_server_start.sh"])
         subprocess.call(["sudo", "ambari-server", "start"])
 
     def run_service_server(self, ambari_server_weave_ip, ambari_server_external_ip):
+        """
+        set up Weave network, run Ambari-agent in this VM
+        :param ambari_server_weave_ip: the Weave IP of Ambari-server
+        :param ambari_server_external_ip: the external IP of Ambari-server
+        :return: None
+        """
         # set up network, run script inside the network directory
         os.chdir("network")
         subprocess.call(["sudo", "chmod", "755", "set_host_network.sh"])
@@ -204,21 +236,16 @@ class VM:
         replace_conf(ambari_server_weave_ip)
 
         # start service
-        # subprocess.call(["sudo", "chmod", "755", "./docker_image/ambari_agent_start.sh"])
-        # subprocess.call(["./docker_image/ambari_agent_start.sh"])
         subprocess.call(["sudo", "ambari-agent", "start"])
 
     def run_docker(self, server_weave_ip, vm_ip_list):
         """
         run all Docker containers with Ambari-agent inside
-        :param server_weave_IP: Weave internal IP of Ambari-server
-        :param server_external_IP: external IP of Ambari-server
-        :param cluster: the cluster instance
+        :param server_weave_ip: Weave internal IP of Ambari-server
+        :param vm_ip_list: external IP list of all other VMs to be connected
+                each docker vm connect to each other and service VM (and ambari-server)
         :return: None
         """
-        # each docker vm connect to each other, service VM (and ambari-server)
-
-
         self._centos7_docker_install()
 
         if "use_partition" in Config.ATTRIBUTES:
