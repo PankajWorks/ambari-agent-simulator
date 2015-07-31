@@ -1,4 +1,4 @@
-'''
+"""
 Licensed to the Apache Software Foundation (ASF) under one
 or more contributor license agreements.  See the NOTICE file
 distributed with this work for additional information
@@ -14,10 +14,11 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-'''
+"""
 
 import ConfigParser
 import os
+
 
 class Config:
     ATTRIBUTES = {}
@@ -27,6 +28,9 @@ class Config:
     SERVICE_SERVER_VM = "service_server_vm"
 
     RELATIVE_CONFIG_FILE_PATH = "config/config.ini"
+
+    def __init__(self):
+        pass
 
     @staticmethod
     def load():
@@ -60,7 +64,7 @@ class Config:
         :param value: the value
         :return: None
         """
-        config= ConfigParser.RawConfigParser()
+        config = ConfigParser.RawConfigParser()
         config.read(Config.RELATIVE_CONFIG_FILE_PATH)
         config.set(section, key, value)
         with open(Config.RELATIVE_CONFIG_FILE_PATH, 'wb') as configfile:

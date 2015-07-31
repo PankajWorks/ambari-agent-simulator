@@ -1,4 +1,4 @@
-'''
+"""
 Licensed to the Apache Software Foundation (ASF) under one
 or more contributor license agreements.  See the NOTICE file
 distributed with this work for additional information
@@ -14,10 +14,12 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-'''
+"""
+
 
 import sys
 import subprocess
+
 
 def replace_conf(server_ip):
     """
@@ -42,6 +44,7 @@ def run_ssh():
     """
     subprocess.call("/run_ssh.sh")
 
+
 def run_ambari_agent():
     """
     command line to run Ambari-agent
@@ -49,12 +52,13 @@ def run_ambari_agent():
     """
     subprocess.call("/ambari_agent_start.sh")
 
-def set_Weave_IP(Weave_IP):
+
+def set_weave_ip(weave_ip):
     """
     set the IP and hostname mapping for this Container
     Docker will assign an IP to each Container, and map it to hostname, which is not we want
     We want our Weave IP to be mapped to hostname
-    :param Weave_IP:
+    :param weave_ip:
     :return: None
     """
     with open("/etc/hosts") as etc_hosts:
@@ -64,17 +68,19 @@ def set_Weave_IP(Weave_IP):
         for index in range(len(all_resolution)):
             if index == 0:
                 token = all_resolution[index].split()
-                etc_hosts.write("{0} {1} {2}\n".format(Weave_IP, token[1], token[2]))
+                etc_hosts.write("{0} {1} {2}\n".format(weave_ip, token[1], token[2]))
             else:
                 etc_hosts.write(all_resolution[index])
 
+
 def main():
     ambari_server_ip = sys.argv[1]
-    my_Weave_IP = sys.argv[2]
+    my_weave_ip = sys.argv[2]
     replace_conf(ambari_server_ip)
-    set_Weave_IP(my_Weave_IP)
+    set_weave_ip(my_weave_ip)
     run_ambari_agent()
     run_ssh()
+
 
 if __name__ == "__main__":
     main()

@@ -1,4 +1,4 @@
-'''
+"""
 Licensed to the Apache Software Foundation (ASF) under one
 or more contributor license agreements.  See the NOTICE file
 distributed with this work for additional information
@@ -14,11 +14,12 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-'''
+"""
 
 import os.path
 import json
 from config import Config
+
 
 class Data:
     def __init__(self):
@@ -29,10 +30,10 @@ class Data:
         load all data from JSON file
         :return: a map, which is a JSON format object
         """
-        json_data = {"clusters":[]}
+        json_data = {"clusters": []}
         if os.path.isfile(self.data_filename):
-            with open(self.data_filename) as file:
-                json_data = json.load(file)
+            with open(self.data_filename) as f:
+                json_data = json.load(f)
         return json_data
 
     def _save_data(self, json_data):
@@ -41,8 +42,8 @@ class Data:
         :param json_data: a map, which is a JSON format object
         :return: None
         """
-        with open(self.data_filename, "w") as file:
-            json.dump(json_data, file, indent=4, separators=(',', ': '))
+        with open(self.data_filename, "w") as f:
+            json.dump(json_data, f, indent=4, separators=(',', ': '))
 
     def add_new_cluster(self, cluster):
         """
@@ -97,7 +98,7 @@ class Data:
             create_time = cluster["create_time"]
             agent_number = 0
             for agent_vm in cluster["ambari_agent_vm_list"]:
-                agent_number = agent_number + len(agent_vm["docker_list"])
+                agent_number += len(agent_vm["docker_list"])
             service_server_num = len(cluster["service_server_vm_list"])
             ambari_server_num = len(cluster["ambari_server_vm"])
             print cluster_name, state, agent_number, service_server_num, ambari_server_num, create_time

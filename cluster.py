@@ -1,4 +1,4 @@
-'''
+"""
 Licensed to the Apache Software Foundation (ASF) under one
 or more contributor license agreements.  See the NOTICE file
 distributed with this work for additional information
@@ -14,10 +14,9 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-'''
+"""
 
 import subprocess
-import time
 import datetime
 from config import Config
 from docker import Docker
@@ -26,6 +25,7 @@ import os
 import time
 from log import Log
 from data import Data
+
 
 class Cluster:
     """
@@ -51,7 +51,6 @@ class Cluster:
         self.service_server_vm_list = []
         # The list of VMs, each will hold multiple Docker containers with Ambari-agent inside
         self.ambari_agent_vm_list = []
-
 
     def _get_int_interval(self, int_list):
         """
@@ -121,7 +120,7 @@ class Cluster:
 
     def get_agent_vm(self, vm_ip):
         """
-        get the VM instance whichs hold Docker containers from the cluster instance
+        get the VM instance which holds Docker containers from the cluster instance
         :param vm_ip: the external IP of the target VM
         :return: the VM instance with the specified iP
         """
@@ -209,7 +208,7 @@ class Cluster:
     def _extract_vm_fqdn_ip(self, gce_info_file_name):
         """
         exatract domain name and IP address of VMs from the output file of GCE
-        :param GCE_info_file_name: output file of "GCE info" command
+        :param gce_info_file_name: output file of "GCE info" command
         :return: A list of tuple, each tuple has domain name and IP of a VM
         """
         lines = []
@@ -249,7 +248,7 @@ class Cluster:
             # request cluster info
             with open(Config.ATTRIBUTES["gce_info_output"], "w") as gce_info_output_file:
                 gce_info_cmd = "gce info {0}".format(name)
-                subprocess.call(["ssh", "-o", "StrictHostKeyChecking=no", "-i", gce_key, gce_login, gce_info_cmd], \
+                subprocess.call(["ssh", "-o", "StrictHostKeyChecking=no", "-i", gce_key, gce_login, gce_info_cmd],
                                 stdout=gce_info_output_file)
 
             fqdn_ip_pairs = self._extract_vm_fqdn_ip(Config.ATTRIBUTES["gce_info_output"])
@@ -271,7 +270,7 @@ class Cluster:
         gce_vm_type = Config.ATTRIBUTES["ambari_server_vm_type"]
         gce_vm_os = Config.ATTRIBUTES["ambari_server_vm_os"]
 
-        gce_extra_cmd=""
+        gce_extra_cmd = ""
         if "ambari_server_vm_extra" in Config.ATTRIBUTES:
             gce_extra_cmd = Config.ATTRIBUTES["ambari_server_vm_extra"]
 
@@ -288,14 +287,14 @@ class Cluster:
         gce_vm_type = Config.ATTRIBUTES["service_server_vm_type"]
         gce_vm_os = Config.ATTRIBUTES["service_server_vm_os"]
 
-        gce_extra_cmd=""
+        gce_extra_cmd = ""
         if "service_server_vm_extra" in Config.ATTRIBUTES:
             gce_extra_cmd = Config.ATTRIBUTES["service_server_vm_extra"]
 
         fqdn_ip_pairs = self.request_vm(name, vm_num, gce_vm_type, gce_vm_os, gce_extra_cmd)
         return fqdn_ip_pairs
 
-    def reqeust_agent_vm(self, vm_num, name):
+    def request_agent_vm(self, vm_num, name):
         """
         Request VMs to hold Docker containers, each with Ambari-agent inside
         :param vm_num: the number of VM to request
@@ -304,14 +303,15 @@ class Cluster:
         """
         gce_vm_type = Config.ATTRIBUTES["ambari_agent_vm_type"]
         gce_vm_os = Config.ATTRIBUTES["ambari_agent_vm_os"]
-        gce_extra_disk=""
+        gce_extra_disk = ""
         if "ambari_agent_vm_extra_disk" in Config.ATTRIBUTES:
             gce_extra_disk = Config.ATTRIBUTES["ambari_agent_vm_extra_disk"]
 
         fqdn_ip_pairs = self.request_vm(name, vm_num, gce_vm_type, gce_vm_os, gce_extra_disk)
         return fqdn_ip_pairs
 
-    def request_gce_cluster(self, ambari_agent_vm_num, docker_num, service_server_num, with_ambari_server, cluster_name):
+    def request_gce_cluster(self, ambari_agent_vm_num, docker_num,
+                            service_server_num, with_ambari_server, cluster_name):
         """
         Request a cluster from GCE
         :param ambari_agent_vm_num: number of VMs to hold Docker containers
@@ -322,11 +322,12 @@ class Cluster:
         :return: None
         """
         ambari_server_fqdn_ip_pairs = []
-        if with_ambari_server == True:
+        if with_ambari_server is True:
             ambari_server_fqdn_ip_pairs = self.request_ambari_server_vm(VM.get_ambari_server_vm_name(cluster_name))
         service_server_fqdn_ip_pairs = self.reqeust_service_server_vm(service_server_num,
                                                                       VM.get_service_server_vm_name(cluster_name))
-        ambari_agent_fqdn_ip_pairs = self.reqeust_agent_vm(ambari_agent_vm_num, VM.get_ambari_agent_vm_name(cluster_name))
+        ambari_agent_fqdn_ip_pairs = self.request_agent_vm(ambari_agent_vm_num,
+                                                           VM.get_ambari_agent_vm_name(cluster_name))
 
         # prepare all attributes of the cluster, write to a file
         self.generate_cluster_info(cluster_name, ambari_server_fqdn_ip_pairs, service_server_fqdn_ip_pairs,
@@ -380,7 +381,7 @@ class Cluster:
                 docker = Docker(docker_ip_str, str(weave_ip_mask), docker_domain_name)
                 vm.add_docker(docker)
 
-            vm_index = vm_index + 1
+            vm_index += 1
             self.ambari_agent_vm_list.append(vm)
 
         self.cluster_name = cluster_name
@@ -405,10 +406,9 @@ class Cluster:
         new_ip[3] = new_ip[3] + increase
         for index in reversed(range(0, 4)):
             if new_ip[index] > 255:
-                new_ip[index - 1] = new_ip[index - 1] + new_ip[index] / 256
-                new_ip[index] = new_ip[index] % 256
+                new_ip[index - 1] += (new_ip[index] / 256)
+                new_ip[index] %= 256
         return "{0}.{1}.{2}.{3}".format(new_ip[0], new_ip[1], new_ip[2], new_ip[3])
-
 
     def _scp_upload(self, vm_external_ip):
         """
@@ -423,8 +423,9 @@ class Cluster:
 
         upload_return_code = 0
         with open(os.devnull, 'w') as shutup:
-            upload_return_code = subprocess.call(["scp", "-o", "StrictHostKeyChecking=no", "-i", vm_key, "-r", ".",
-                                                  vm_directory],stdout=shutup, stderr=shutup)
+            upload_return_code = subprocess.call(["scp", "-o", "StrictHostKeyChecking=no", "-i",
+                                                  vm_key, "-r", ".", vm_directory],
+                                                 stdout=shutup, stderr=shutup)
         if upload_return_code == 0:
             Log.write("VM ", vm_external_ip, " file upload succeed")
         else:
@@ -454,7 +455,7 @@ class Cluster:
             all_finished = True
             for hostname in process_list:
                 output_file, output_file_path, process = process_list[hostname]
-                if terminate_state_list[hostname] == False:
+                if terminate_state_list[hostname] is False:
                     all_finished = False
                     returncode = process.poll()
                     if returncode is None:
@@ -488,7 +489,7 @@ class Cluster:
             vm_external_ip = vm.external_ip
             self._scp_upload(vm_external_ip)
 
-            vm_output_file_path = vm._get_ssh_output_file_path()
+            vm_output_file_path = vm.get_ssh_output_file_path()
             vm_output_file = open(vm_output_file_path, "w")
 
             # ssh install server
@@ -499,8 +500,8 @@ class Cluster:
             vm_key = Config.ATTRIBUTES["vm_key_file"]
             Log.write(vm_ssh_python_cmd)
 
-            process = subprocess.Popen(["ssh", "-o", "StrictHostKeyChecking=no", "-t", "-i", vm_key, \
-                                       vm_ssh_login, vm_ssh_cmd], \
+            process = subprocess.Popen(["ssh", "-o", "StrictHostKeyChecking=no", "-t", "-i", vm_key,
+                                       vm_ssh_login, vm_ssh_cmd],
                                        stdout=vm_output_file, stderr=vm_output_file)
             process_list[vm.hostname] = (vm_output_file, vm_output_file_path, process)
             Log.write("Configuring VM ", vm.hostname, " ... ...")
@@ -523,26 +524,25 @@ class Cluster:
             vm_external_ip = vm.external_ip
             self._scp_upload(vm_external_ip)
 
-            vm_output_file_path = vm._get_ssh_output_file_path()
+            vm_output_file_path = vm.get_ssh_output_file_path()
             vm_output_file = open(vm_output_file_path, "w")
 
             # ssh install server
             vm_ssh_login = "{0}@{1}".format(Config.ATTRIBUTES["vm_user"], vm_external_ip)
             vm_ssh_cd_cmd = "cd {0}".format(Config.ATTRIBUTES["vm_code_directory"])
-            vm_ssh_python_cmd = "python launcher_service_server.py {0} {1} {2} {3}".format( \
+            vm_ssh_python_cmd = "python launcher_service_server.py {0} {1} {2} {3}".format(
                 vm_external_ip, server_weave_ip, server_external_ip, self.cluster_name)
             vm_ssh_cmd = "{0};{1}".format(vm_ssh_cd_cmd, vm_ssh_python_cmd)
             vm_key = Config.ATTRIBUTES["vm_key_file"]
             Log.write(vm_ssh_python_cmd)
 
-            process = subprocess.Popen(["ssh", "-o", "StrictHostKeyChecking=no", "-t", "-i", vm_key, \
-                                        vm_ssh_login, vm_ssh_cmd], \
+            process = subprocess.Popen(["ssh", "-o", "StrictHostKeyChecking=no", "-t", "-i", vm_key,
+                                        vm_ssh_login, vm_ssh_cmd],
                                        stdout=vm_output_file, stderr=vm_output_file)
 
             process_list[vm.hostname] = (vm_output_file, vm_output_file_path, process)
             Log.write("Configuring VM ", vm.hostname, " ... ...")
         return process_list
-
 
     def run_docker_on_cluster_asyn(self, server_weave_ip, server_external_ip):
         """
@@ -562,19 +562,19 @@ class Cluster:
             vm_external_ip = vm.external_ip
             self._scp_upload(vm_external_ip)
 
-            vm_output_file_path = vm._get_ssh_output_file_path()
+            vm_output_file_path = vm.get_ssh_output_file_path()
             vm_output_file = open(vm_output_file_path, "w")
 
             vm_ssh_login = "{0}@{1}".format(Config.ATTRIBUTES["vm_user"], vm_external_ip)
             vm_ssh_cd_cmd = "cd {0}".format(Config.ATTRIBUTES["vm_code_directory"])
-            vm_ssh_python_cmd = "python launcher_docker.py {0} {1} {2} {3}".format( \
+            vm_ssh_python_cmd = "python launcher_docker.py {0} {1} {2} {3}".format(
                 vm_external_ip, server_weave_ip, server_external_ip, self.cluster_name)
             vm_ssh_cmd = "{0};{1}".format(vm_ssh_cd_cmd, vm_ssh_python_cmd)
             vm_key = Config.ATTRIBUTES["vm_key_file"]
             Log.write(vm_ssh_python_cmd)
 
-            process = subprocess.Popen(["ssh", "-o", "StrictHostKeyChecking=no", "-t", "-i", vm_key, \
-                                        vm_ssh_login, vm_ssh_cmd], \
+            process = subprocess.Popen(["ssh", "-o", "StrictHostKeyChecking=no", "-t", "-i", vm_key,
+                                        vm_ssh_login, vm_ssh_cmd],
                                        stdout=vm_output_file, stderr=vm_output_file)
 
             process_list[vm.hostname] = (vm_output_file, vm_output_file_path, process)

@@ -1,4 +1,4 @@
-'''
+"""
 Licensed to the Apache Software Foundation (ASF) under one
 or more contributor license agreements.  See the NOTICE file
 distributed with this work for additional information
@@ -14,18 +14,18 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-'''
-
-
-import sys
-from config import Config
-from cluster import Cluster
+"""
 
 # configure the VM to set Docker, Weave network, run Ambari-agent inside the Docker
 # argv 1: the external IP of this VM
 # argv 2: the Weave IP of the Ambari-server
 # argv 3: the external IP of the Ambari-server
 # argv 4: the name of the cluster
+
+import sys
+from config import Config
+from cluster import Cluster
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 5:
@@ -54,4 +54,3 @@ if __name__ == "__main__":
 
     vm = cluster.get_agent_vm(my_external_ip)
     vm.run_docker(server_weave_ip, vm_ip_list)
-

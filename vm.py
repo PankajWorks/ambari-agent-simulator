@@ -1,4 +1,4 @@
-'''
+"""
 Licensed to the Apache Software Foundation (ASF) under one
 or more contributor license agreements.  See the NOTICE file
 distributed with this work for additional information
@@ -14,7 +14,7 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-'''
+"""
 
 
 import subprocess
@@ -87,7 +87,6 @@ class VM:
         """
         return "{0}.weave.local".format(hostname)
 
-
     def _gce_get_hostname(self, domain_name):
         """
         The hostname of GCE VM is the first part of the internal domain name
@@ -96,14 +95,14 @@ class VM:
         """
         return domain_name.split(".")[0]
 
-    def _get_ssh_output_file_path(self):
+    def get_ssh_output_file_path(self):
         """
         get the file name to hold the SSH output of the VM
         :return: a file name
         """
-        VM_output_file_path = "{0}/vm-{1}-{2}".format(Config.ATTRIBUTES["output_folder"], self.hostname, self.external_ip)
-        return VM_output_file_path
-
+        vm_output_file_path = "{0}/vm-{1}-{2}".format(Config.ATTRIBUTES["output_folder"],
+                                                      self.hostname, self.external_ip)
+        return vm_output_file_path
 
     def add_docker(self, docker):
         """
@@ -181,9 +180,9 @@ class VM:
             docker_ip_with_mask = "{0}/{1}".format(docker.ip, docker.mask)
             cmd = "python /launcher_agent.py {0} {1}; /bin/bash".format(server_weave_ip, docker.ip)
 
-            command = ["sudo", "weave", "run", docker_ip_with_mask, "-d", "-it", \
-                       "-h", docker.weave_domain_name, \
-                       "--name", docker.get_container_name(), \
+            command = ["sudo", "weave", "run", docker_ip_with_mask, "-d", "-it",
+                       "-h", docker.weave_domain_name,
+                       "--name", docker.get_container_name(),
                        docker_image, "bash", "-c", cmd]
             print command
             subprocess.call(command)
@@ -227,7 +226,8 @@ class VM:
         os.chdir("network")
         subprocess.call(["sudo", "chmod", "755", "set_host_network.sh"])
         subprocess.call(["./set_host_network.sh", self.weave_internal_ip,
-                         self.weave_dns_ip, self.weave_ip_mask, self.hostname, self.weave_domain_name, ambari_server_external_ip])
+                         self.weave_dns_ip, self.weave_ip_mask, self.hostname,
+                         self.weave_domain_name, ambari_server_external_ip])
         os.chdir("..")
 
         # install ambari agent and start service

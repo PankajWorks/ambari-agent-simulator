@@ -1,4 +1,4 @@
-'''
+"""
 Licensed to the Apache Software Foundation (ASF) under one
 or more contributor license agreements.  See the NOTICE file
 distributed with this work for additional information
@@ -14,7 +14,7 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-'''
+"""
 
 # configure the VM to set Weave network, run Ambari-agent directly inside VM
 # argv 1: the external IP of this VM
@@ -25,6 +25,7 @@ limitations under the License.
 from config import Config
 from cluster import Cluster
 import sys
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 5:

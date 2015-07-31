@@ -1,4 +1,4 @@
-'''
+"""
 Licensed to the Apache Software Foundation (ASF) under one
 or more contributor license agreements.  See the NOTICE file
 distributed with this work for additional information
@@ -14,8 +14,7 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-'''
-
+"""
 
 import time
 import sys
@@ -23,6 +22,7 @@ from cluster import Cluster
 from config import Config
 from data import Data
 import subprocess
+
 
 def request_cluster(argv):
     """
@@ -55,6 +55,7 @@ def request_cluster(argv):
     time.sleep(int(time_to_wait))
     print "complete"
 
+
 def up_cluster(argv):
     """
     run all Ambari-agents in Docker container and VMs,
@@ -79,7 +80,7 @@ def up_cluster(argv):
 
     ambari_server = cluster.get_ambari_server_vm()
     if ambari_server is None:
-        print "Unable to run cluster", cluster_name ,\
+        print "Unable to run cluster", cluster_name,\
             " no Ambari-server in this cluster, you can only merge this cluster into another one"
         exit(1)
 
@@ -95,6 +96,7 @@ def up_cluster(argv):
     subprocess.call(["reset"])
 
     print "Complete"
+
 
 def merge_cluster(argv):
     """
@@ -159,6 +161,7 @@ def merge_cluster(argv):
     subprocess.call(["reset"])
     print "Complete"
 
+
 def list_cluster():
     """
     list the cluster creation history
@@ -166,6 +169,7 @@ def list_cluster():
     """
     data = Data()
     data.print_cluster_summary_list()
+
 
 def show_cluster(argv):
     """
@@ -219,9 +223,9 @@ def print_help():
     print "\t\t", "<the name of the cluster>"
     print
 
-
     print "help", "  ", "help info"
     print
+
 
 def main(argv):
     # the first argument is the python file name
@@ -252,9 +256,7 @@ def main(argv):
     else:
         print_help()
 
+
 if __name__ == "__main__":
     Config.load()
     main(sys.argv)
-
-
-
