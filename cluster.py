@@ -39,6 +39,7 @@ class Cluster:
     # A cluster with running Ambari-server and Ambari-agents is in RUNNING state
     STATE_RUNNING = "RUNNING"
     # A cluster is merged into another cluster and running, is in MERGE state
+    # the name of the extended cluster is directly following the state String in JSON
     STATE_MERGE = "MERGE"
 
     def __init__(self):
@@ -117,6 +118,7 @@ class Cluster:
             else:
                 interval_str = "[{0}-{1}]".format(interval[0], interval[1])
             print Docker.get_pattern_presentation(self.cluster_name, interval_str)
+        print
 
     def get_agent_vm(self, vm_ip):
         """

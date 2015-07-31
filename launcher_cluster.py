@@ -120,6 +120,7 @@ def merge_cluster(argv):
 
     weave_ip = ""
     external_ip = ""
+    extended_cluster_name = ""
     if len(argv) == 4:
         extended_cluster_name = argv[3]
         extended_cluster = Cluster.load_from_json(extended_cluster_name)
@@ -130,7 +131,7 @@ def merge_cluster(argv):
         if extended_cluster.state != Cluster.STATE_RUNNING:
             if extended_cluster.state == Cluster.STATE_FREE:
                 print extended_cluster_name, " cluster is not running, can't be extended"
-            elif extended_cluster.state == Cluster.STATE_MERGE:
+            elif extended_cluster.state.startswith(Cluster.STATE_MERGE):
                 print extended_cluster_name, " cluster is merged to another cluster, can't be extended"
             exit(1)
 
@@ -154,7 +155,7 @@ def merge_cluster(argv):
     merged_cluster.run_cluster(weave_ip, external_ip)
 
     data = Data()
-    data.set_cluster_state(merged_cluster_name, Cluster.STATE_MERGE)
+    data.set_cluster_state(merged_cluster_name, "{0} to {1}".format(Cluster.STATE_MERGE, extended_cluster_name))
 
     # reset terminal. The SSH subprocess call of the program cause the terminal display to be abnormal.
     # This is an unsolved minor issue.
@@ -182,6 +183,11 @@ def show_cluster(argv):
         exit(1)
     cluster_name = argv[2]
     cluster = Cluster.load_from_json(cluster_name)
+
+    if cluster is None:
+        print cluster_name, " cluster not found"
+        exit(1)
+
     cluster.print_description()
 
 
